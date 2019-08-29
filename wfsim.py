@@ -136,14 +136,25 @@ def main(args):
                  .withGloballyShiftedOptic("LSST.LSSTCamera", cameraShift)
                  .withLocallyRotatedOptic("LSST.LSSTCamera", rot(*cameraTilt))
                 )
+    if args.noGQ:
+        telescope.clearObscuration()
+        m1 = telescope.itemDict['LSST.M1']
+        m1.obscuration = batoid.ObscNegation(batoid.ObscCircle(4.18))
 
     zs = np.zeros((args.nstar, args.jmax+1), dtype=float)
     for i, (x, y) in enumerate(zip(xs, ys)):
-        zs[i] = batoid.analysis.zernikeGQ(
-            telescope, np.deg2rad(x), np.deg2rad(y), 625e-9,
-            jmax=args.jmax, nrings=20, nspokes=41,
-            reference='chief'
-        )
+        if args.noGQ:
+            zs[i] = batoid.analysis.zernike(
+                telescope, np.deg2rad(x), np.deg2rad(y), 625e-9,
+                jmax=args.jmax, nx=64,
+                reference='chief'
+            )
+        else:
+            zs[i] = batoid.analysis.zernikeGQ(
+                telescope, np.deg2rad(x), np.deg2rad(y), 625e-9,
+                jmax=args.jmax, nrings=20, nspokes=41,
+                reference='chief'
+            )
     zs += args.zNoise*np.random.normal(size=zs.shape)
 
     if args.outFile is not None:
@@ -180,6 +191,8 @@ if __name__ == '__main__':
     parser.add_argument("--jmax", default=28, type=int)
     parser.add_argument("--outFile", default=None, type=str)
     parser.add_argument("--show", action='store_true')
+
+    parser.add_argument("--noGQ", action='store_true')
 
     args = parser.parse_args()
     main(args)
