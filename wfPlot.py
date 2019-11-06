@@ -52,20 +52,19 @@ def main(args):
     with open("chips.pkl", 'rb') as f:
         chips = pickle.load(f)
 
+    reference_rng = np.random.RandomState(args.reference_seed)
     if args.chip_rms_height != 0.0:
-        for k, v in chips.items():
-            v['zernikes'] = np.random.normal(size=2)
-            v['zernikes'] *= np.array([0, args.chip_rms_height])
+        for k, chip in chips.items():
+            chip['zernikes'] = np.random.normal(size=2)
+            chip['zernikes'] *= np.array([0, args.chip_rms_height])
     if args.chip_rms_tilt != 0.0:
-        for k, v in chips.items():
-            if 'zernikes' in v:
-                v['zernikes'] = np.concatenate([
-                    v['zernikes'],
-                    np.random.normal(size=2)*args.chip_rms_tilt
-                ])
-            else:
-                v['zernikes'] = np.random.normal(size=4)*args.chip_rms_tilt
-                v['zernikes'] *= [0,0,1,1]
+        for k, chip in chips.items():
+            if 'zernikes' not in chip:
+                chip['zernikes'] = np.zeros(2)
+            chip['zernikes'] = np.concatenate([
+                chip['zernikes'],
+                np.random.normal(size=2)*args.chip_rms_tilt
+            ])
     factory = LSSTFactory(args.band, chips=chips)
 
     M1M3_bend = [0]*20
@@ -80,6 +79,13 @@ def main(args):
         M1M3_bend=M1M3_bend
     )
     reference_telescope = factory.make_visit_telescope()
+
+    star_rng = np.random.RandomState(args.star_seed)
+    focalRadius = 1.825  # degrees
+    th = star_rng.uniform(0, 2*np.pi, size=args.nstar)
+    ph = np.sqrt(star_rng.uniform(0, focalRadius**2, size=args.nstar))
+    xs = ph*np.cos(th)  # positions in degrees
+    ys = ph*np.sin(th)
 
     if args.show_spot:
         fig = plt.figure(figsize=(10, 10))
@@ -104,14 +110,8 @@ def main(args):
         plt.show()
 
     if args.show_zernike:
-        focalRadius = 1.825  # degrees
-        starRNG = np.random.RandomState(args.star_seed)
-        th = starRNG.uniform(0, 2*np.pi, size=args.nstar)
-        ph = np.sqrt(starRNG.uniform(0, focalRadius**2, size=args.nstar))
-        xs = ph*np.cos(th)  # positions in degrees
-        ys = ph*np.sin(th)
         zs = np.zeros((args.nstar, args.jmax+1), dtype=float)
-        markBad = np.zeros(len(xs), dtype=bool)
+        good = np.ones(len(xs), dtype=bool)
         for i, (x, y) in enumerate(zip(xs, ys)):
             try:
                 zs[i] = visit_telescope.get_zernike(
@@ -119,26 +119,18 @@ def main(args):
                     jmax=args.jmax, rings=10, reference='chief'
                 )
             except ValueError:
-                markBad[i] = True
+                good[i] = False
                 continue
 
-        xs = xs[~markBad]
-        ys = ys[~markBad]
-        zs = zs[~markBad]
-
         fig = plt.figure(figsize=(13, 8))
-        batoid.plotUtils.zernikePyramid(xs, ys, zs.T[4:], s=1, fig=fig)
+        batoid.plotUtils.zernikePyramid(
+            xs[good], ys[good], zs[good].T[4:], s=1, fig=fig
+        )
         plt.show()
 
     if args.show_zernike_resid:
-        focalRadius = 1.825  # degrees
-        starRNG = np.random.RandomState(args.star_seed)
-        th = starRNG.uniform(0, 2*np.pi, size=args.nstar)
-        ph = np.sqrt(starRNG.uniform(0, focalRadius**2, size=args.nstar))
-        xs = ph*np.cos(th)  # positions in degrees
-        ys = ph*np.sin(th)
         zs = np.zeros((args.nstar, args.jmax+1), dtype=float)
-        markBad = np.zeros(len(xs), dtype=bool)
+        good = np.ones(len(xs), dtype=bool)
         for i, (x, y) in enumerate(zip(xs, ys)):
             try:
                 zs[i] = visit_telescope.get_zernike(
@@ -150,15 +142,13 @@ def main(args):
                     jmax=args.jmax, rings=10, reference='chief'
                 )
             except ValueError:
-                markBad[i] = True
+                good[i] = False
                 continue
 
-        xs = xs[~markBad]
-        ys = ys[~markBad]
-        zs = zs[~markBad]
-
         fig = plt.figure(figsize=(13, 8))
-        batoid.plotUtils.zernikePyramid(xs, ys, zs.T[4:], s=1, fig=fig)
+        batoid.plotUtils.zernikePyramid(
+            xs[good], ys[good], zs[good].T[4:], s=1, fig=fig
+        )
         plt.show()
 
     if args.show_wavefront:
@@ -284,6 +274,7 @@ if __name__ == '__main__':
     parser.add_argument("--kmax", default=28, type=int)
     parser.add_argument("--nstar", default=1000, type=int)
     parser.add_argument("--star_seed", default=57721, type=int)
+    parser.add_argument("--reference_seed", default=5772, type=int)
     args = parser.parse_args()
 
     main(args)

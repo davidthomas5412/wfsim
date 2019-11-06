@@ -310,7 +310,7 @@ class VisitTelescope:
     def get_zernike(self, x, y, **kwargs):
         telescope = self.get_chip(x, y)
         return batoid.analysis.zernikeGQ(
-            telescope, x, y, self.factory.wavelength, **kwargs
+            telescope, x, y, self.factory.wavelength, eps=0.61, **kwargs
         )
 
     def get_wavefront(self, x, y, **kwargs):
