@@ -19,6 +19,7 @@ def betterGridData(inputCoords, inputValue, outputGrid, k=20):
     _, neighbors = tree.query(outputGrid, k=k)
     toFix = np.nonzero(~np.isfinite(output))[0]
     for idx in toFix:
+        # Extrapolate by fitting a cubic to `k` nearest points
         neighbor = neighbors[idx]
         basis = galsim.zernike.zernikeBasis(
             10,
