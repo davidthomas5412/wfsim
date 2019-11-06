@@ -1,0 +1,88 @@
+M2 dx
+  Constant coma
+  Linear astigmatism
+  Field tilt
+
+M2 dz
+  Focus
+
+M2 tilt
+  Constant coma
+  Linear astigmatism
+  Field tilt
+
+Camera dx
+  Constant coma
+  Field tilt
+  Linear astigmatism
+
+Camera dz
+  Focus
+
+Camera tilt
+  Field tilt
+
+M1M3 0/1:
+  Constant Astigmatism
+
+M1M3 2:
+  Focus
+
+M1M3 3/4:
+  Constant trefoil
+
+M1M3 5/6:
+  Constant coma
+  Linear astigmatism
+
+M1M3 7/8:
+  Constant quatrefoil
+
+M1M3 9/10:
+  Constant Astigmatism
+  Constant 2nd astig
+
+M1M3 11:
+  Linear coma
+  Astig Astig
+
+M1M3 12/13:
+  Constant pentafoil
+
+M1M3 14/15:
+  Linear Astigmatism
+  Linear 2nd astigmatism
+  Constant coma
+  Astigmatic trefoil
+
+M1M3 16/17:
+  Constant 2nd trefoil
+  Constant trefoil
+  Linear astigmatism
+  Linear quatrefoil
+
+M1M3 18/19:
+  Constant hexafoil
+
+
+DOF:
+Solid body:
+  Constant coma, linear astigmatism, field tilt, focus
+First 10 mirror modes add:
+  Constant Astig, trefoil, quatrefoil, 2nd astig.
+11 is special: linear coma and astig astig
+12/13 adds constant pentafoil
+14/15 adds linear 2nd astig, astigmatic trefoil
+16/17 adds constant 2nd trefoil, linear quatrefoil,
+18/19 adds constant hexfoil
+
+
+So fit out in order:
+  - Constant coma, linear astigmatism, field tilt, focus
+  - Constant astig, trefoil, quatrefoil, 2nd astig
+  - the rest
+
+Note: Nonzero fiducial values:
+  Constant focus,
+  Linear coma,
+  Astig astig
