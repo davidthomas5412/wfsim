@@ -198,7 +198,6 @@ class LSSTVisitTelescope:
         )
 
     def getSpot(self, x, y, **kwargs):
-        dirCos = batoid.utils.fieldToDirCos(x, y)
         rays = batoid.RayVector.asPolar(
             wavelength=750e-9,
             outer=4.18, inner=2.5,
@@ -222,7 +221,7 @@ def main(args):
 
         # Rigid body perturbations
         M2Dx = 0.6e-4
-        M2Dz = 0.04e-4 * 0.3
+        M2Dz = 0.012e-4
         M2Tilt = np.deg2rad(0.25/60)
         M2Shift = args.M2Rigid*visitRNG.normal(scale=(M2Dx, M2Dx, M2Dz))
         M2Tilt = args.M2Rigid*visitRNG.normal(scale=(M2Tilt, M2Tilt))
@@ -329,7 +328,7 @@ def main(args):
                 spotx *= 1e6
                 spoty *= 1e6
                 ax.scatter(spoty, spotx, s=0.05, c='k', alpha=0.05)
-                ax.set_xlim(-20, 20)
+                ax.set_xlim(-20, 20)  # 40 micron = 4 pixels
                 ax.set_ylim(-20, 20)
             plt.show()
 
@@ -357,46 +356,30 @@ def main(args):
             plt.show()
 
         if args.reportDZ:
-            # Compute Double Zernike coefficients (and sum!)
-            rings = 10
-            spokes = 2*rings + 1
-            Li, w = np.polynomial.legendre.leggauss(rings)
-            rings = np.sqrt((1+Li)/2)*1.75
-            weight = w*(2*np.pi)/(4*spokes)
-            rings, spokes = np.meshgrid(rings, spokes)
-            weight = np.broadcast_to(weight, rings.shape)
-            rings = rings.ravel()
-            spokes = spokes.ravel()
-            weight = weight.ravel()
-            thx = rings*np.cos(spokes)
-            thy = rings*np.sin(spokes)
-            dzs = []
-
-            import galsim
-            focalBasis = galsim.zernike.zernikeBasis(
-                21, thx, thy,
-                R_outer=1.75,
+            dzs = batoid.analysis.doubleZernike(
+                lvt.telescope, np.deg2rad(1.75), 750e-9, rings=args.rings,
+                reference='chief', jmax=args.jmax, kmax=args.jmax, eps=0.61
             )
-
-            allZs = []
-            for tx, ty, w in zip(thx, thy, weight):
-                allZs.append(
-                    w*lvt.getZernikes(
-                        np.deg2rad(tx), np.deg2rad(ty),
-                        use_chip=False,
-                        jmax=args.jmax, rings=args.rings, reference='chief'
-                    )
-                )
-            print(np.sqrt(np.sum(np.dot(focalBasis, allZs)**2)))
+            print(np.sqrt(np.sum(dzs[:, 4:]**2)))
 
 
 if __name__ == '__main__':
     from argparse import ArgumentParser
     parser = ArgumentParser()
     parser.add_argument("--nstar", default=1000, type=int)
-    parser.add_argument("--visitSeed", default=None, type=int)
-    parser.add_argument("--fixedSeed", default=577, type=int)
-    parser.add_argument("--starSeed", default=None, type=int)
+    parser.add_argument(
+        "--visitSeed", default=None, type=int,
+        help="Seed affecting rigid body perturbations, bending modes, and "
+             "rotation angle"
+    )
+    parser.add_argument(
+        "--fixedSeed", default=577, type=int,
+        help="Seed affecting chip-gaps and permanent figure errors"
+    )
+    parser.add_argument(
+        "--starSeed", default=None, type=int,
+        help="Seed affecting positions of stars and measurement errors"
+    )
     parser.add_argument("--zNoise", default=0.01, type=float)
 
     parser.add_argument("--M2Rigid", default=0.0, type=float)
@@ -412,8 +395,8 @@ if __name__ == '__main__':
 
     parser.add_argument("--rotate", action='store_true')
 
-    parser.add_argument("--jmax", default=28, type=int)
-    parser.add_argument("--rings", default=10, type=int)
+    parser.add_argument("--jmax", default=36, type=int)
+    parser.add_argument("--rings", default=6, type=int)
     parser.add_argument("--outFile", default=None, type=str)
     parser.add_argument("--showZernikes", action='store_true')
     parser.add_argument("--showWavefront", action='store_true')
