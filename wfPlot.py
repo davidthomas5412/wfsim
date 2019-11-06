@@ -1,6 +1,8 @@
 import pickle
+
 import numpy as np
 import matplotlib.pyplot as plt
+import batoid
 
 from wfTel import LSSTFactory
 
@@ -45,49 +47,42 @@ norm = [
     ["M1M3 bend 20",      -0.0696,     0.0699]
 ]
 
-if __name__ == '__main__':
-    from argparse import ArgumentParser
-    parser = ArgumentParser()
-    parser.add_argument("--chipRMSHeight", default=0.0, type=float)
-    parser.add_argument("--chipRMSTilt", default=0.0, type=float)
-    parser.add_argument("--M2_shift", default=(0.0, 0.0, 0.0), nargs=3, type=float)
-    parser.add_argument("--M2_tilt", default=(0.0, 0.0), nargs=2, type=float)
-    parser.add_argument("--camera_shift", default=(0.0, 0.0, 0.0), nargs=3, type=float)
-    parser.add_argument("--camera_tilt", default=(0.0, 0.0), nargs=2, type=float)
-    parser.add_argument("--showWF", action='store_true')
-    parser.add_argument("--showSpots", action='store_true')
-    parser.add_argument("--showZernikes", action='store_true')
-    parser.add_argument("--normalized", action='store_true')
-    parser.add_argument("--band", choices=['u', 'g', 'r', 'i', 'z', 'y'], default='i')
-    args = parser.parse_args()
 
+def main(args):
     with open("chips.pkl", 'rb') as f:
         chips = pickle.load(f)
 
-    if args.chipRMSHeight != 0.0:
+    if args.chip_rms_height != 0.0:
         for k, v in chips.items():
-            v['zernikes'] = np.random.normal(size=2)*np.array([0, args.chipRMSHeight])
-    if args.chipRMSTilt != 0.0:
+            v['zernikes'] = np.random.normal(size=2)
+            v['zernikes'] *= np.array([0, args.chip_rms_height])
+    if args.chip_rms_tilt != 0.0:
         for k, v in chips.items():
             if 'zernikes' in v:
                 v['zernikes'] = np.concatenate([
                     v['zernikes'],
-                    np.random.normal(size=2)*args.chipRMSTilt
+                    np.random.normal(size=2)*args.chip_rms_tilt
                 ])
             else:
-                v['zernikes'] = np.random.normal(size=4)*args.chipRMSTilt
+                v['zernikes'] = np.random.normal(size=4)*args.chip_rms_tilt
                 v['zernikes'] *= [0,0,1,1]
     factory = LSSTFactory(args.band, chips=chips)
-    visit_telescope = factory.make_visit_telescope(
-        M2_shift = args.M2_shift,
-        M2_tilt = args.M2_tilt,
-        camera_shift = args.camera_shift,
-        camera_tilt = args.camera_tilt,
-    )
 
-    if args.showSpots:
+    M1M3_bend = [0]*20
+    for ibend, value in args.M1M3:
+        M1M3_bend[int(ibend)] = float(value)
+
+    visit_telescope = factory.make_visit_telescope(
+        M2_shift=args.M2_shift,
+        M2_tilt=args.M2_tilt,
+        camera_shift=args.camera_shift,
+        camera_tilt=args.camera_tilt,
+        M1M3_bend=M1M3_bend
+    )
+    reference_telescope = factory.make_visit_telescope()
+
+    if args.show_spot:
         fig = plt.figure(figsize=(10, 10))
-        lefts = []
         for k, chip in chips.items():
             rect = np.array([
                 chip['left'],
@@ -99,12 +94,196 @@ if __name__ == '__main__':
             rect += [0.5, 0.5, 0, 0]
             ax = addAxes(rect, fig)
             spotx, spoty = visit_telescope.get_spot(
-                np.deg2rad(chip['x']/0.3*1.75),
-                np.deg2rad(chip['y']/0.3*1.75),
+                chip['field_x'],
+                chip['field_y'],
                 naz=90, nrad=30
             )
             ax.scatter(spotx, spoty, s=0.1, alpha=0.1)
             ax.set_xlim(-15e-6, 15e-6)
             ax.set_ylim(-15e-6, 15e-6)
-            lefts.append(chip['left'])
         plt.show()
+
+    if args.show_zernike:
+        focalRadius = 1.825  # degrees
+        starRNG = np.random.RandomState(args.star_seed)
+        th = starRNG.uniform(0, 2*np.pi, size=args.nstar)
+        ph = np.sqrt(starRNG.uniform(0, focalRadius**2, size=args.nstar))
+        xs = ph*np.cos(th)  # positions in degrees
+        ys = ph*np.sin(th)
+        zs = np.zeros((args.nstar, args.jmax+1), dtype=float)
+        markBad = np.zeros(len(xs), dtype=bool)
+        for i, (x, y) in enumerate(zip(xs, ys)):
+            try:
+                zs[i] = visit_telescope.get_zernike(
+                    np.deg2rad(x), np.deg2rad(y),
+                    jmax=args.jmax, rings=10, reference='chief'
+                )
+            except ValueError:
+                markBad[i] = True
+                continue
+
+        xs = xs[~markBad]
+        ys = ys[~markBad]
+        zs = zs[~markBad]
+
+        fig = plt.figure(figsize=(13, 8))
+        batoid.plotUtils.zernikePyramid(xs, ys, zs.T[4:], s=1, fig=fig)
+        plt.show()
+
+    if args.show_zernike_resid:
+        focalRadius = 1.825  # degrees
+        starRNG = np.random.RandomState(args.star_seed)
+        th = starRNG.uniform(0, 2*np.pi, size=args.nstar)
+        ph = np.sqrt(starRNG.uniform(0, focalRadius**2, size=args.nstar))
+        xs = ph*np.cos(th)  # positions in degrees
+        ys = ph*np.sin(th)
+        zs = np.zeros((args.nstar, args.jmax+1), dtype=float)
+        markBad = np.zeros(len(xs), dtype=bool)
+        for i, (x, y) in enumerate(zip(xs, ys)):
+            try:
+                zs[i] = visit_telescope.get_zernike(
+                    np.deg2rad(x), np.deg2rad(y),
+                    jmax=args.jmax, rings=10, reference='chief'
+                )
+                zs[i] -= reference_telescope.get_zernike(
+                    np.deg2rad(x), np.deg2rad(y),
+                    jmax=args.jmax, rings=10, reference='chief'
+                )
+            except ValueError:
+                markBad[i] = True
+                continue
+
+        xs = xs[~markBad]
+        ys = ys[~markBad]
+        zs = zs[~markBad]
+
+        fig = plt.figure(figsize=(13, 8))
+        batoid.plotUtils.zernikePyramid(xs, ys, zs.T[4:], s=1, fig=fig)
+        plt.show()
+
+    if args.show_wavefront:
+        fig = plt.figure(figsize=(10, 10))
+        for k, chip in chips.items():
+            rect = np.array([
+                chip['left'],
+                chip['bottom'],
+                chip['right'] - chip['left'],
+                chip['top'] - chip['bottom'],
+            ])
+            rect *= 1.3
+            rect += [0.5, 0.5, 0, 0]
+            ax = addAxes(rect, fig)
+            wf = visit_telescope.get_wavefront(
+                chip['field_x'],
+                chip['field_y'],
+                nx=64
+            ).array
+            ax.imshow(wf, vmin=-1, vmax=1)
+        plt.show()
+
+    if args.show_wavefront_resid:
+        fig = plt.figure(figsize=(10, 10))
+        for k, chip in chips.items():
+            rect = np.array([
+                chip['left'],
+                chip['bottom'],
+                chip['right'] - chip['left'],
+                chip['top'] - chip['bottom'],
+            ])
+            rect *= 1.3
+            rect += [0.5, 0.5, 0, 0]
+            ax = addAxes(rect, fig)
+            wf = visit_telescope.get_wavefront(
+                chip['field_x'],
+                chip['field_y'],
+                nx=64
+            ).array
+            wf -= reference_telescope.get_wavefront(
+                chip['field_x'],
+                chip['field_y'],
+                nx=64
+            ).array
+            ax.imshow(wf, vmin=-0.2, vmax=0.2)
+        plt.show()
+
+    if args.double_zernike:
+        dzs = batoid.analysis.doubleZernike(
+            visit_telescope.actual_telescope, np.deg2rad(1.75), 750e-9, rings=10,
+            reference='chief', jmax=args.jmax, kmax=args.kmax, eps=0.61
+        )
+        dzs = dzs[:,4:]
+        asort = np.argsort(np.abs(dzs).ravel())[::-1]
+        focal_idx, pupil_idx = np.unravel_index(asort[:20], dzs.shape)
+        cumsum = 0.0
+        print()
+        print("fid pid      val      rms")
+        for fid, pid in zip(focal_idx, pupil_idx):
+            val = dzs[fid, pid]
+            cumsum += val**2
+            print("{:3d} {:3d} {:8.4f} {:8.4f}".format(fid, pid+4, val, np.sqrt(cumsum)))
+        print("sum sqr dz {:8.4f}".format(np.sqrt(np.sum(dzs**2))))
+
+    if args.double_zernike_resid:
+        dzs = batoid.analysis.doubleZernike(
+            visit_telescope.actual_telescope, np.deg2rad(1.75), 750e-9, rings=10,
+            reference='chief', jmax=args.jmax, kmax=args.kmax, eps=0.61
+        )
+        dzs -= batoid.analysis.doubleZernike(
+            reference_telescope.actual_telescope, np.deg2rad(1.75), 750e-9, rings=10,
+            reference='chief', jmax=args.jmax, kmax=args.kmax, eps=0.61
+        )
+        dzs = dzs[:,4:]
+        asort = np.argsort(np.abs(dzs).ravel())[::-1]
+        focal_idx, pupil_idx = np.unravel_index(asort[:20], dzs.shape)
+        cumsum = 0.0
+        print()
+        print("fid pid      val      rms")
+        for fid, pid in zip(focal_idx, pupil_idx):
+            val = dzs[fid, pid]
+            cumsum += val**2
+            print("{:3d} {:3d} {:8.4f} {:8.4f}".format(fid, pid+4, val, np.sqrt(cumsum)))
+        print("sum sqr dz {:8.4f}".format(np.sqrt(np.sum(dzs**2))))
+
+
+
+if __name__ == '__main__':
+    from argparse import ArgumentParser
+    parser = ArgumentParser()
+    parser.add_argument(
+        "--chip_rms_height", default=0.0, type=float
+    )
+    parser.add_argument(
+        "--chip_rms_tilt", default=0.0, type=float
+    )
+    parser.add_argument(
+        "--M2_shift", default=(0.0, 0.0, 0.0), nargs=3, type=float
+    )
+    parser.add_argument(
+        "--M2_tilt", default=(0.0, 0.0), nargs=2, type=float
+    )
+    parser.add_argument(
+        "--camera_shift", default=(0.0, 0.0, 0.0), nargs=3, type=float
+    )
+    parser.add_argument(
+        "--camera_tilt", default=(0.0, 0.0), nargs=2, type=float
+    )
+    parser.add_argument(
+        "--M1M3", action='append', nargs=2, default=list(),
+    )
+    parser.add_argument("--show_wavefront", action='store_true')
+    parser.add_argument("--show_wavefront_resid", action='store_true')
+    parser.add_argument("--show_spot", action='store_true')
+    parser.add_argument("--show_zernike", action='store_true')
+    parser.add_argument("--show_zernike_resid", action='store_true')
+    parser.add_argument("--double_zernike", action='store_true')
+    parser.add_argument("--double_zernike_resid", action='store_true')
+    parser.add_argument(
+        "--band", choices=['u', 'g', 'r', 'i', 'z', 'y'], default='i'
+    )
+    parser.add_argument("--jmax", default=28, type=int)
+    parser.add_argument("--kmax", default=28, type=int)
+    parser.add_argument("--nstar", default=1000, type=int)
+    parser.add_argument("--star_seed", default=57721, type=int)
+    args = parser.parse_args()
+
+    main(args)

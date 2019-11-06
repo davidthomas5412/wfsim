@@ -5,6 +5,7 @@ import numpy as np
 import batoid
 from galsim.utilities import lazy_property
 
+
 effective_wavelengths = {
     'u':350e-9,
     'g':480e-9,
@@ -14,11 +15,36 @@ effective_wavelengths = {
     'y':975e-9
 }
 
+
 with open("mirrorModes.pkl", 'rb') as f:
     bendingModeDict = pickle.load(f)
 
+
 def rot(thx, thy):
     return np.dot(batoid.RotX(thx), batoid.RotY(thy))
+
+
+def _fieldToFocal(field_x, field_y, telescope, wavelength):
+    ray = batoid.Ray.fromStop(
+        0.0, 0.0,
+        optic=telescope,
+        wavelength=wavelength,
+        theta_x=field_x, theta_y=field_y, projection='gnomonic'
+    )
+    telescope.traceInPlace(ray)
+    return ray.x, ray.y
+
+
+def _focalToField(x, y, telescope, wavelength):
+    from scipy.optimize import least_squares
+
+    def _resid(args):
+        fx1, fy1 = args
+        x1, y1 = _fieldToFocal(fx1, fy1, telescope, wavelength)
+        return np.array([x1-x, y1-y])
+
+    result = least_squares(_resid, np.array([0.0, 0.0]))
+    return result.x[0], result.x[1]
 
 
 class LSSTFactory:
@@ -63,6 +89,7 @@ class LSSTFactory:
         self.M3_figure_coef = M3_figure_coef
         self.L1_figure_coef = L1_figure_coef
         self.chips = chips
+        self._fillInChipFields()
 
     @lazy_property
     def fiducial_telescope(self):
@@ -98,6 +125,14 @@ class LSSTFactory:
                 out[k] = batoid.Plane()
         # Note, this is the centered representation.  We'll shift down below.
         return out
+
+    def _fillInChipFields(self):
+        for k, chip in self.chips.items():
+            chip['field_x'], chip['field_y'] = _focalToField(
+                chip['x'], chip['y'],
+                self.fiducial_telescope,
+                self.wavelength
+            )
 
     def make_visit_telescope(
         self,
@@ -278,7 +313,7 @@ class VisitTelescope:
             telescope, x, y, self.factory.wavelength, **kwargs
         )
 
-    def get_wf(self, x, y, **kwargs):
+    def get_wavefront(self, x, y, **kwargs):
         telescope = self.get_chip(x, y)
         return batoid.analysis.wavefront(
             telescope, x, y, self.factory.wavelength, **kwargs
