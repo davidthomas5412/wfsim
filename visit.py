@@ -102,6 +102,19 @@ def visit(args):
         camera_shift = (0, 0, 0)
         camera_tilt = (0, 0)
 
+    if args.M1M3_through10_amplitude != 0.0:
+        M1M3_bend = []
+        for i in range(1, 11):
+            val = visit_rng.normal()
+            val *= np.ptp(norm[f'M1M3 bend {i}'])/2
+            val += np.mean(norm[f'M1M3 bend {i}'])
+            M1M3_bend.append(val)
+        for i in range(11, 21):
+            M1M3_bend.append(0.0)
+        M1M3_bend = np.array(M1M3_bend)*args.M1M3_amplitude
+    else:
+        M1M3_bend = np.zeros(20)
+
     if args.M1M3_amplitude != 0.0:
         M1M3_bend = []
         for i in range(1, 21):
@@ -164,6 +177,7 @@ if __name__ == '__main__':
     parser.add_argument("--reference_file", default='reference.pkl', type=str)
     parser.add_argument("--M2_amplitude", default=0.0, type=float)
     parser.add_argument("--camera_amplitude", default=0.0, type=float)
+    parser.add_argument("--M1M3_through10_amplitude", default=0.0, type=float)
     parser.add_argument("--M1M3_amplitude", default=0.0, type=float)
     parser.add_argument("--amplitude", default=None, type=float)
     parser.add_argument("--visit_seed", default=0, type=int)

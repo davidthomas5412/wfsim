@@ -55,7 +55,7 @@ def main(args):
     reference_rng = np.random.RandomState(args.reference_seed)
     if args.chip_rms_height != 0.0:
         for k, chip in chips.items():
-            chip['zernikes'] = np.random.normal(size=2)
+            chip['zernikes'] = reference_rng.normal(size=2)
             chip['zernikes'] *= np.array([0, args.chip_rms_height])
     if args.chip_rms_tilt != 0.0:
         for k, chip in chips.items():
@@ -63,7 +63,7 @@ def main(args):
                 chip['zernikes'] = np.zeros(2)
             chip['zernikes'] = np.concatenate([
                 chip['zernikes'],
-                np.random.normal(size=2)*args.chip_rms_tilt
+                reference_rng.normal(size=2)*args.chip_rms_tilt
             ])
     factory = LSSTFactory(args.band, chips=chips)
 
@@ -203,7 +203,7 @@ def main(args):
         )
         dzs = dzs[:,4:]
         asort = np.argsort(np.abs(dzs).ravel())[::-1]
-        focal_idx, pupil_idx = np.unravel_index(asort[:20], dzs.shape)
+        focal_idx, pupil_idx = np.unravel_index(asort[:50], dzs.shape)
         cumsum = 0.0
         print()
         print("fid pid      val      rms")
@@ -233,7 +233,6 @@ def main(args):
             cumsum += val**2
             print("{:3d} {:3d} {:8.4f} {:8.4f}".format(fid, pid+4, val, np.sqrt(cumsum)))
         print("sum sqr dz {:8.4f}".format(np.sqrt(np.sum(dzs**2))))
-
 
 
 if __name__ == '__main__':

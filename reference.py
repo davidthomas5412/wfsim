@@ -11,9 +11,10 @@ def reference(args):
     with open("chips.pkl", 'rb') as f:
         chips = pickle.load(f)
 
+    reference_rng = np.random.RandomState(args.reference_seed)
     if args.chip_rms_height != 0.0:
         for k, chip in chips.items():
-            chip['zernikes'] = np.random.normal(size=2)
+            chip['zernikes'] = reference_rng.normal(size=2)
             chip['zernikes'] *= np.array([0, args.chip_rms_height])
     if args.chip_rms_tilt != 0.0:
         for k, chip in chips.items():
@@ -21,7 +22,7 @@ def reference(args):
                 chip['zernikes'] = np.zeros(2)
             chip['zernikes'] = np.concatenate([
                 chip['zernikes'],
-                np.random.normal(size=2)*args.chip_rms_tilt
+                reference_rng.normal(size=2)*args.chip_rms_tilt
             ])
     factory = LSSTFactory(args.band, chips=chips)
     reference_telescope = factory.make_visit_telescope()
