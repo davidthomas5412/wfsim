@@ -219,6 +219,13 @@ class VisitTelescope:
         return self.factory.fiducial_telescope
 
     @lazy_property
+    def rotated_fiducial_telescope(self):
+        return (
+            self.fiducial_telescope
+            .withLocallyRotatedOptic('LSSTCamera', batoid.RotZ(self.rotation))
+        )
+
+    @lazy_property
     def actual_telescope(self):
         telescope = self.fiducial_telescope
 
@@ -298,29 +305,33 @@ class VisitTelescope:
             theta_x=x, theta_y=y,
             optic=self.fiducial_telescope
         )
-        self.fiducial_telescope.traceInPlace(ray)
+        self.rotated_fiducial_telescope.traceInPlace(ray)
         for k, chip in self.factory.chips.items():
             if (    ray.x > chip['left'] and
                     ray.x < chip['right'] and
                     ray.y > chip['bottom'] and
                     ray.y < chip['top']):
-                return self.chip_telescopes[k]
+                return k
         raise ValueError("Can't find chip")
 
+    def get_chip_telescope(self, x, y):
+        k = self.get_chip(x, y)
+        return self.chip_telescopes[k]
+
     def get_zernike(self, x, y, **kwargs):
-        telescope = self.get_chip(x, y)
+        telescope = self.get_chip_telescope(x, y)
         return batoid.analysis.zernikeGQ(
             telescope, x, y, self.factory.wavelength, eps=0.61, **kwargs
         )
 
     def get_wavefront(self, x, y, **kwargs):
-        telescope = self.get_chip(x, y)
+        telescope = self.get_chip_telescope(x, y)
         return batoid.analysis.wavefront(
             telescope, x, y, self.factory.wavelength, **kwargs
         )
 
     def get_spot(self, x, y, naz=300, nrad=50, **kwargs):
-        telescope = self.get_chip(x, y)
+        telescope = self.get_chip_telescope(x, y)
         rays = batoid.RayVector.asPolar(
             wavelength=self.factory.wavelength,
             outer=4.18, inner=2.5,
@@ -345,15 +356,10 @@ if __name__ == '__main__':
 
     factory = LSSTFactory(
         'i',
-        chips=chips
+        chips=chips,
     )
 
-    visit_telescope = factory.make_visit_telescope()
+    visit_telescope = factory.make_visit_telescope(rotation=0)
 
-    x, y = np.deg2rad(1.75), np.deg2rad(0)
-
-    print(visit_telescope.dz())
-    print()
-    print(visit_telescope.get_zernike(x, y))
-    print(visit_telescope.get_wf(x, y))
-    print(visit_telescope.get_spot(x, y))
+    x, y = np.deg2rad(1.0), np.deg2rad(1.0)
+    print(visit_telescope.get_chip(x, y))

@@ -14,11 +14,21 @@ for det in camera:
     x, y = lct.ccdPixelToFocalMm(*center, name)
     x *= 1e-3 # mm -> m
     y *= 1e-3
+    # Old code which kept DM x/y convention.
+    # print(f"{name}  {x:10.7f}  {y:10.7f}")
+    # left = x - 10e-6*(center[0])
+    # right = left + 10e-6*4072
+    # bottom = y - 10e-6*(center[1])
+    # top = bottom + 10e-6*4000
+
+    # New code which rotates into Camera Coordinate System
+    x, y = y, x
     print(f"{name}  {x:10.7f}  {y:10.7f}")
     left = x - 10e-6*(center[0])
-    right = left + 10e-6*4072
+    right = left + 10e-6*4000
     bottom = y - 10e-6*(center[1])
-    top = bottom + 10e-6*4000
+    top = bottom + 10e-6*4072
+
     out[name] = {
         'left':left,
         'right':right,
