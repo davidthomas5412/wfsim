@@ -128,12 +128,13 @@ class LSSTFactory:
         return out
 
     def _fillInChipFields(self):
-        for k, chip in self.chips.items():
-            chip['cam_field_x'], chip['cam_field_y'] = _focalToCamField(
-                chip['x'], chip['y'],
-                self.fiducial_telescope,
-                self.wavelength
-            )
+        if self.chips:
+            for k, chip in self.chips.items():
+                chip['cam_field_x'], chip['cam_field_y'] = _focalToCamField(
+                    chip['x'], chip['y'],
+                    self.fiducial_telescope,
+                    self.wavelength
+                )
 
     def make_visit_telescope(
         self,
@@ -296,7 +297,6 @@ class VisitTelescope:
             out[k] = (
                 self.actual_telescope
                 .withSurface('Detector', self.factory.chip_error_dict[k])
-                # .withGloballyShiftedOptic('Detector', (v['x'], v['y'], 0.0))
                 .withLocallyShiftedOptic('Detector', (v['x'], v['y'], 0.0))
             )
         return out

@@ -59,6 +59,8 @@ norm = [
     ["M1M3 bend 20",      -0.0696,     0.0699]
 ]
 
+# chip_rms_height of 4e-6 and chip_rms_tilt of 2e-6 seem about right.
+
 
 def main(args):
     with open("chips.pkl", 'rb') as f:

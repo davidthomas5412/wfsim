@@ -73,7 +73,7 @@ First 10 mirror modes add:
 11 is special: linear coma and astig astig
 12/13 adds constant pentafoil
 14/15 adds linear 2nd astig, astigmatic trefoil
-16/17 adds constant 2nd trefoil, linear quatrefoil,
+16/17 adds constant 2nd trefoil, linear quatrefoil
 18/19 adds constant hexfoil
 
 

@@ -126,18 +126,41 @@ def visit(args):
     else:
         M1M3_bend = np.zeros(20)
 
+    if args.rotation is not None:
+        rotation = args.rotation
+    elif args.rot_seed is not None:
+        rot_rng = np.random.RandomState(args.rot_seed)
+        rotation = rot_rng.uniform(-np.pi/2, np.pi/2)
+    else:
+        rotation = 0.0
+
     visit_telescope = factory.make_visit_telescope(
         M2_shift=M2_shift,
         M2_tilt=M2_tilt,
         camera_shift=camera_shift,
         camera_tilt=camera_tilt,
-        M1M3_bend=M1M3_bend
+        M1M3_bend=M1M3_bend,
+        rotation=rotation
     )
 
-    xs = reference['xs']
-    ys = reference['ys']
-    zs = np.zeros_like(reference['zs'])
-    good = np.ones_like(xs, dtype=bool)
+    # Either use same star xs and ys as reference, or if star_seed is set,
+    # generate new stars.
+    if args.star_seed is not None:
+        star_rng = np.random.RandomState(args.star_seed)
+        focalRadius = 1.825  # degrees
+        th = star_rng.uniform(0, 2*np.pi, size=args.nstar)
+        ph = np.sqrt(star_rng.uniform(0, focalRadius**2, size=args.nstar))
+        xs = ph*np.cos(th)  # positions in degrees
+        ys = ph*np.sin(th)
+        jmax = reference['args'].jmax
+        zs = np.zeros((args.nstar, jmax+1), dtype=float)
+        good = np.ones(len(xs), dtype=bool)
+    else:
+        xs = reference['xs']
+        ys = reference['ys']
+        zs = np.zeros_like(reference['zs'])
+        good = np.ones_like(xs, dtype=bool)
+
     for i, (x, y) in enumerate(zip(xs, ys)):
         try:
             zs[i] = visit_telescope.get_zernike(
@@ -182,6 +205,11 @@ if __name__ == '__main__':
     parser.add_argument("--amplitude", default=None, type=float)
     parser.add_argument("--visit_seed", default=0, type=int)
     parser.add_argument("--visit_file", default=None, type=str)
+    parser.add_argument("--nstar", default=10000, type=int)
+    parser.add_argument("--star_seed", default=None, type=int)
+    group = parser.add_mutually_exclusive_group()
+    group.add_argument("--rotation", default=None, type=float)
+    group.add_argument("--rot_seed", default=None, type=int)
     parser.add_argument("--plot", action='store_true')
     parser.add_argument("--plot_resid", action='store_true')
     args = parser.parse_args()
