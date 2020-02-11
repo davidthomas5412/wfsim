@@ -4,6 +4,7 @@ import numpy as np
 
 import batoid
 from galsim.utilities import lazy_property
+from galsim.zernike import zernikeRotMatrix
 
 
 effective_wavelengths = {
@@ -24,18 +25,18 @@ def rot(thx, thy):
     return np.dot(batoid.RotX(thx), batoid.RotY(thy))
 
 
-def _fieldToFocal(field_x, field_y, telescope, wavelength):
+def _fieldToFocal(cam_field_x, cam_field_y, telescope, wavelength):
     ray = batoid.Ray.fromStop(
         0.0, 0.0,
         optic=telescope,
         wavelength=wavelength,
-        theta_x=field_x, theta_y=field_y, projection='gnomonic'
+        theta_x=cam_field_x, theta_y=cam_field_y, projection='gnomonic'
     )
     telescope.traceInPlace(ray)
     return ray.x, ray.y
 
 
-def _focalToField(x, y, telescope, wavelength):
+def _focalToCamField(x, y, telescope, wavelength):
     from scipy.optimize import least_squares
 
     def _resid(args):
@@ -119,7 +120,7 @@ class LSSTFactory:
             if 'zernikes' in v:
                 out[k] = batoid.Zernike(
                     v['zernikes'],
-                    R_outer=np.hypot(2000, 2036)*10e-6  # roughly the CCD diagonal
+                    R_outer=np.hypot(2000, 2036)*10e-6  # roughly the diagonal
                 )
             else:
                 out[k] = batoid.Plane()
@@ -128,7 +129,7 @@ class LSSTFactory:
 
     def _fillInChipFields(self):
         for k, chip in self.chips.items():
-            chip['field_x'], chip['field_y'] = _focalToField(
+            chip['cam_field_x'], chip['cam_field_y'] = _focalToCamField(
                 chip['x'], chip['y'],
                 self.fiducial_telescope,
                 self.wavelength
@@ -295,7 +296,8 @@ class VisitTelescope:
             out[k] = (
                 self.actual_telescope
                 .withSurface('Detector', self.factory.chip_error_dict[k])
-                .withGloballyShiftedOptic('Detector', (v['x'], v['y'], 0.0))
+                # .withGloballyShiftedOptic('Detector', (v['x'], v['y'], 0.0))
+                .withLocallyShiftedOptic('Detector', (v['x'], v['y'], 0.0))
             )
         return out
 
@@ -320,9 +322,10 @@ class VisitTelescope:
 
     def get_zernike(self, x, y, **kwargs):
         telescope = self.get_chip_telescope(x, y)
-        return batoid.analysis.zernikeGQ(
+        z = batoid.analysis.zernikeGQ(
             telescope, x, y, self.factory.wavelength, eps=0.61, **kwargs
         )
+        return np.dot(zernikeRotMatrix(len(z)-1, -self.rotation), z)
 
     def get_wavefront(self, x, y, **kwargs):
         telescope = self.get_chip_telescope(x, y)

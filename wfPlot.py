@@ -6,12 +6,24 @@ import batoid
 
 from wfTel import LSSTFactory
 
-def addAxes(rect, fig):
+def addAxes(rect, fig, theta=0.0, showFrame=True):
+    center = rect[0]+0.5*rect[2]-0.5, rect[1]+0.5*rect[3]-0.5
+    if theta != 0.0:
+        sth, cth = np.sin(theta), np.cos(theta)
+        newCenter = np.dot(
+            np.array([[cth, -sth], [sth, cth]]),
+            center
+        )
+        rect[0] = newCenter[0]-0.5*rect[2]+0.5
+        rect[1] = newCenter[1]-0.5*rect[3]+0.5
+
     ax = fig.add_axes(rect)
     ax.set_xticklabels([])
     ax.set_yticklabels([])
     ax.set_xticks([])
     ax.set_yticks([])
+    if not showFrame:
+        ax.axis('off')
     return ax
 
 norm = [
@@ -76,16 +88,20 @@ def main(args):
         M2_tilt=args.M2_tilt,
         camera_shift=args.camera_shift,
         camera_tilt=args.camera_tilt,
-        M1M3_bend=M1M3_bend
+        M1M3_bend=M1M3_bend,
+        rotation=args.rotation
     )
-    reference_telescope = factory.make_visit_telescope()
+    reference_telescope = factory.make_visit_telescope(rotation=args.rotation)
 
     star_rng = np.random.RandomState(args.star_seed)
-    focalRadius = 1.825  # degrees
+    focalRadius = 2.05 # degrees to get to very corner of science array
     th = star_rng.uniform(0, 2*np.pi, size=args.nstar)
     ph = np.sqrt(star_rng.uniform(0, focalRadius**2, size=args.nstar))
     xs = ph*np.cos(th)  # positions in degrees
     ys = ph*np.sin(th)
+
+    srot, crot = np.sin(args.rotation), np.cos(args.rotation)
+    rot = np.array([[crot, -srot], [srot, crot]])
 
     if args.show_spot:
         fig = plt.figure(figsize=(10, 10))
@@ -99,9 +115,12 @@ def main(args):
             rect *= 1.3
             rect += [0.5, 0.5, 0, 0]
             ax = addAxes(rect, fig)
+            field_x, field_y = np.dot(
+                rot,
+                [chip['cam_field_x'], chip['cam_field_y']]
+            )
             spotx, spoty = visit_telescope.get_spot(
-                chip['field_x'],
-                chip['field_y'],
+                field_x, field_y,
                 naz=90, nrad=30
             )
             ax.scatter(spotx, spoty, s=0.1, alpha=0.1)
@@ -162,13 +181,16 @@ def main(args):
             ])
             rect *= 1.3
             rect += [0.5, 0.5, 0, 0]
-            ax = addAxes(rect, fig)
+            ax = addAxes(rect, fig, theta=args.rotation, showFrame=False)
+            field_x, field_y = np.dot(
+                rot,
+                [chip['cam_field_x'], chip['cam_field_y']]
+            )
             wf = visit_telescope.get_wavefront(
-                chip['field_x'],
-                chip['field_y'],
+                field_x, field_y,
                 nx=64
             ).array
-            ax.imshow(wf, vmin=-1, vmax=1)
+            ax.imshow(wf, vmin=-1, vmax=1, cmap='Spectral_r')
         plt.show()
 
     if args.show_wavefront_resid:
@@ -182,18 +204,20 @@ def main(args):
             ])
             rect *= 1.3
             rect += [0.5, 0.5, 0, 0]
-            ax = addAxes(rect, fig)
+            ax = addAxes(rect, fig, theta=args.rotation, showFrame=False)
+            field_x, field_y = np.dot(
+                rot,
+                [chip['cam_field_x'], chip['cam_field_y']]
+            )
             wf = visit_telescope.get_wavefront(
-                chip['field_x'],
-                chip['field_y'],
+                field_x, field_y,
                 nx=64
             ).array
             wf -= reference_telescope.get_wavefront(
-                chip['field_x'],
-                chip['field_y'],
+                field_x, field_y,
                 nx=64
             ).array
-            ax.imshow(wf, vmin=-0.2, vmax=0.2)
+            ax.imshow(wf, vmin=-0.2, vmax=0.2, cmap='Spectral_r')
         plt.show()
 
     if args.double_zernike:
@@ -258,6 +282,9 @@ if __name__ == '__main__':
     )
     parser.add_argument(
         "--M1M3", action='append', nargs=2, default=list(),
+    )
+    parser.add_argument(
+        "--rotation", default=0.0, type=float
     )
     parser.add_argument("--show_wavefront", action='store_true')
     parser.add_argument("--show_wavefront_resid", action='store_true')
