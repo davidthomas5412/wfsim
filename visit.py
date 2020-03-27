@@ -150,22 +150,33 @@ def visit(args):
         focalRadius = 1.825  # degrees
         th = star_rng.uniform(0, 2*np.pi, size=args.nstar)
         ph = np.sqrt(star_rng.uniform(0, focalRadius**2, size=args.nstar))
-        xs = ph*np.cos(th)  # positions in degrees
-        ys = ph*np.sin(th)
+        thxs = ph*np.cos(th)  # positions in degrees
+        thys = ph*np.sin(th)
         jmax = reference['args'].jmax
         zs = np.zeros((args.nstar, jmax+1), dtype=float)
-        good = np.ones(len(xs), dtype=bool)
+        ccds = np.zeros(args.nstar, dtype='<U7')
+        ccdxs = np.zeros_like(thxs)
+        ccdys = np.zeros_like(thxs)
+        good = np.ones(len(thxs), dtype=bool)
     else:
-        xs = reference['xs']
-        ys = reference['ys']
+        thxs = reference['thxs']
+        thys = reference['thys']
         zs = np.zeros_like(reference['zs'])
+        ccds = reference['ccds']
+        ccdxs = reference['ccdxs']
+        ccdys = reference['ccdys']
         good = np.ones_like(xs, dtype=bool)
 
-    for i, (x, y) in enumerate(zip(xs, ys)):
+    for i, (thx, thy) in enumerate(zip(thxs, thys)):
         try:
+            ccds[i] = visit_telescope.get_chip(np.deg2rad(thx), np.deg2rad(thy))
             zs[i] = visit_telescope.get_zernike(
-                np.deg2rad(x), np.deg2rad(y),
+                np.deg2rad(thx), np.deg2rad(thy),
                 jmax=reference['args'].jmax, rings=10, reference='chief'
+            )
+            ccdxs[i], ccdys[i] = visit_telescope.get_fp(
+                np.deg2rad(thx), np.deg2rad(thy),
+                type='chip'
             )
         except ValueError:
             good[i] = False
@@ -174,14 +185,15 @@ def visit(args):
     if args.plot:
         fig = plt.figure(figsize=(13, 8))
         batoid.plotUtils.zernikePyramid(
-            xs[good], ys[good], zs[good].T[4:], s=1, fig=fig
+            thxs[good], thys[good], zs[good].T[4:], s=1, fig=fig
         )
         plt.show()
 
     if args.plot_resid:
         fig = plt.figure(figsize=(13, 8))
         batoid.plotUtils.zernikePyramid(
-            xs[good], ys[good], (zs-reference['zs'])[good].T[4:], s=1, fig=fig,
+            thxs[good], thys[good],
+            (zs-reference['zs'])[good].T[4:], s=1, fig=fig,
             vmin=-0.2, vmax=0.2
         )
         plt.show()
@@ -189,7 +201,22 @@ def visit(args):
     if args.visit_file is not None:
         with open(args.visit_file, 'wb') as fd:
             pickle.dump(
-                dict(xs=xs, ys=ys, zs=zs, good=good, args=args),
+                dict(
+                    thxs=thxs,
+                    thys=thys,
+                    zs=zs,
+                    ccds=ccds,
+                    ccdxs=ccdxs,
+                    ccdys=ccdys,
+                    good=good,
+                    M2_shift=M2_shift,
+                    M2_tilt=M2_tilt,
+                    camera_shift=camera_shift,
+                    camera_tilt=camera_tilt,
+                    M1M3_bend=M1M3_bend,
+                    rotation=rotation,
+                    args=args
+                ),
                 fd
             )
 

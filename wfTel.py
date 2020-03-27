@@ -94,6 +94,8 @@ class LSSTFactory:
 
     @lazy_property
     def fiducial_telescope(self):
+        """Fiducial telescope.  No perturbations.  No chip gaps.
+        """
         fn = f"LSST_{self.band}.yaml"
         return batoid.Optic.fromYaml(fn)
 
@@ -115,6 +117,8 @@ class LSSTFactory:
 
     @lazy_property
     def chip_error_dict(self):
+        """Dictionary of individual chip surfaces.  Indexed by chip names.
+        """
         out = {}
         for k, v in self.chips.items():
             if 'zernikes' in v:
@@ -218,10 +222,12 @@ class VisitTelescope:
 
     @lazy_property
     def fiducial_telescope(self):
+        """Unperturbed, unrotated, no chip gaps"""
         return self.factory.fiducial_telescope
 
     @lazy_property
     def rotated_fiducial_telescope(self):
+        """Unperturbed.  No chip gaps.  But rotator is applied."""
         return (
             self.fiducial_telescope
             .withLocallyRotatedOptic('LSSTCamera', batoid.RotZ(self.rotation))
@@ -229,6 +235,7 @@ class VisitTelescope:
 
     @lazy_property
     def actual_telescope(self):
+        """Perturbed and rotated.  No chip gaps."""
         telescope = self.fiducial_telescope
 
         M1_terms = [telescope['M1'].surface]
@@ -285,6 +292,9 @@ class VisitTelescope:
         return telescope
 
     def dz(self, jmax=36, kmax=36, rings=10):
+        """Double Zernike coefficients of actual_telescope (rotated, perturbed,
+        no chip gaps)
+        """
         return batoid.analysis.doubleZernike(
             self.actual_telescope, np.deg2rad(1.75), self.factory.wavelength,
             rings=rings, reference='chief', jmax=jmax, kmax=kmax, eps=0.61
@@ -292,6 +302,9 @@ class VisitTelescope:
 
     @lazy_property
     def chip_telescopes(self):
+        """Dictionary of individual chip telescopes, which include
+        perturbations, the rotator, and chip gaps.
+        """
         out = {}
         for k, v in self.factory.chips.items():
             out[k] = (
@@ -301,10 +314,14 @@ class VisitTelescope:
             )
         return out
 
-    def get_chip(self, x, y):
+    def get_chip(self, thx, thy):
+        """Determine a chip by tracing a chief ray through the
+        rotated_fiducial_telescope.  So handles rotation only.  No
+        perturbations.  No chip gaps.  Returns chip name.
+        """
         ray = batoid.Ray.fromStop(
             0.0, 0.0, wavelength=self.factory.wavelength,
-            theta_x=x, theta_y=y,
+            theta_x=thx, theta_y=thy,
             optic=self.fiducial_telescope
         )
         self.rotated_fiducial_telescope.traceInPlace(ray)
@@ -316,36 +333,91 @@ class VisitTelescope:
                 return k
         raise ValueError("Can't find chip")
 
-    def get_chip_telescope(self, x, y):
-        k = self.get_chip(x, y)
+    def get_chip_telescope(self, thx, thy):
+        """Return perturbed, rotated, gappy telescope for chip at thx, thy"""
+        k = self.get_chip(thx, thy)
         return self.chip_telescopes[k]
 
-    def get_zernike(self, x, y, **kwargs):
-        telescope = self.get_chip_telescope(x, y)
+    def get_zernike(self, thx, thy, **kwargs):
+        """Return Zernike as measured in CCD frame.
+        """
+        telescope = self.get_chip_telescope(thx, thy)
         z = batoid.analysis.zernikeGQ(
-            telescope, x, y, self.factory.wavelength, eps=0.61, **kwargs
+            telescope, thx, thy, self.factory.wavelength, eps=0.61, **kwargs
         )
         return np.dot(zernikeRotMatrix(len(z)-1, -self.rotation), z)
 
-    def get_wavefront(self, x, y, **kwargs):
-        telescope = self.get_chip_telescope(x, y)
+    def get_wavefront(self, thx, thy, **kwargs):
+        """Return wavefront in telescope frame (entrance pupil coords)"""
+        telescope = self.get_chip_telescope(thx, thy)
         return batoid.analysis.wavefront(
-            telescope, x, y, self.factory.wavelength, **kwargs
+            telescope, thx, thy, self.factory.wavelength, **kwargs
         )
 
-    def get_spot(self, x, y, naz=300, nrad=50, **kwargs):
-        telescope = self.get_chip_telescope(x, y)
+    def get_spot(self, thx, thy, naz=300, nrad=50, reference='mean', **kwargs):
+        """Return spots.  In CCD coords.
+        """
+        telescope = self.get_chip_telescope(thx, thy)
         rays = batoid.RayVector.asPolar(
             wavelength=self.factory.wavelength,
             outer=4.18, inner=2.5,
-            theta_x=x, theta_y=y,
+            theta_x=thx, theta_y=thy,
             optic=telescope,
             nrad=nrad, naz=naz,
             **kwargs
         )
         telescope.traceInPlace(rays)
         w = ~rays.vignetted
-        return rays.x[w]-np.mean(rays.x[w]), rays.y[w]-np.mean(rays.y[w])
+        if reference == 'mean':
+            return rays.x[w]-np.mean(rays.x[w]), rays.y[w]-np.mean(rays.y[w])
+        elif reference == 'chief':
+            ray = batoid.Ray.fromStop(
+                0, 0,
+                wavelength=self.factory.wavelength,
+                theta_x=thx, theta_y=thy,
+                optic=telescope
+            )
+            telescope.traceInPlace(ray)
+            return rays.x[w]-ray.x, rays.y[w]-ray.y
+        elif reference == 'None':
+            return rays.x[w], rays.y[w]
+
+    def get_fp(self, thx, thy, type='spot'):
+        """Detailed FP position.  Trace from a non-vignetted ring on the pupil.
+        Or from the chief ray.
+        """
+        if type == 'chief':
+            ray = batoid.Ray.fromStop(
+                0.0, 0.0, wavelength=self.factory.wavelength,
+                theta_x=thx, theta_y=thy,
+                optic=self.fiducial_telescope
+            )
+            self.actual_telescope.traceInPlace(ray)
+            return np.array([ray.x, ray.y])
+        elif type == 'spot':
+            rays = batoid.RayVector.asSpokes(
+                wavelength=self.factory.wavelength,
+                outer=3.5, inner=3.2,
+                theta_x=thx, theta_y=thy,
+                optic=self.fiducial_telescope,
+                rings=3, spokes=51
+            )
+            self.actual_telescope.traceInPlace(rays)
+            if np.any(rays.vignetted) or np.any(rays.failed):
+                raise ValueError()
+            return np.array([np.mean(rays.x), np.mean(rays.y)])
+        elif type == 'chip':
+            rays = batoid.RayVector.asSpokes(
+                wavelength=self.factory.wavelength,
+                outer=3.5, inner=3.2,
+                theta_x=thx, theta_y=thy,
+                optic=self.fiducial_telescope,
+                rings=3, spokes=51
+            )
+            telescope = self.get_chip_telescope(thx, thy)
+            telescope.traceInPlace(rays)
+            w = ~rays.vignetted
+            return np.array([np.mean(rays.x[w]), np.mean(rays.y[w])])
 
 
 if __name__ == '__main__':

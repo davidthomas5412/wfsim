@@ -37,7 +37,7 @@ norm = [
     ["camera z",        -1.31e-05,    8.8e-06],
     ["camera thx",      -5.92e-05,   5.92e-05],  # radians
     ["camera thy",      -5.92e-05,   5.92e-05],
-    ["M1M3 bend 1",       -0.0567,     0.0567],  # not sure?
+    ["M1M3 bend 1",       -0.0567,     0.0567],  # units unclear...
     ["M1M3 bend 2",       -0.0568,     0.0567],
     ["M1M3 bend 3",       -0.0555,     0.0792],
     ["M1M3 bend 4",       -0.0608,     0.0607],
@@ -93,14 +93,15 @@ def main(args):
         M1M3_bend=M1M3_bend,
         rotation=args.rotation
     )
+    # ref has rotation, chip gaps, but no perturbations
     reference_telescope = factory.make_visit_telescope(rotation=args.rotation)
 
     star_rng = np.random.RandomState(args.star_seed)
     focalRadius = 2.05 # degrees to get to very corner of science array
     th = star_rng.uniform(0, 2*np.pi, size=args.nstar)
     ph = np.sqrt(star_rng.uniform(0, focalRadius**2, size=args.nstar))
-    xs = ph*np.cos(th)  # positions in degrees
-    ys = ph*np.sin(th)
+    thxs = ph*np.cos(th)  # positions in degrees
+    thys = ph*np.sin(th)
 
     srot, crot = np.sin(args.rotation), np.cos(args.rotation)
     rot = np.array([[crot, -srot], [srot, crot]])
@@ -121,9 +122,10 @@ def main(args):
                 rot,
                 [chip['cam_field_x'], chip['cam_field_y']]
             )
+
             spotx, spoty = visit_telescope.get_spot(
                 field_x, field_y,
-                naz=90, nrad=30
+                naz=90, nrad=30, reference='chief'
             )
             ax.scatter(spotx, spoty, s=0.1, alpha=0.1)
             ax.set_xlim(-15e-6, 15e-6)
@@ -131,36 +133,35 @@ def main(args):
         plt.show()
 
     if args.show_zernike:
-        zs = np.zeros((args.nstar, args.jmax+1), dtype=float)
-        good = np.ones(len(xs), dtype=bool)
-        for i, (x, y) in enumerate(zip(xs, ys)):
+        # plots Zernikes measured in CCD frame.
+        zs = np.empty((args.nstar, args.jmax+1), dtype=float)
+        good = np.ones(len(thxs), dtype=bool)
+        for i, (thx, thy) in enumerate(zip(thxs, thys)):
             try:
-                zs[i] = visit_telescope.get_zernike(
-                    np.deg2rad(x), np.deg2rad(y),
-                    jmax=args.jmax, rings=10, reference='chief'
+                zs[i,:] = visit_telescope.get_zernike(
+                    np.deg2rad(thx), np.deg2rad(thy),
+                    jmax=args.jmax, rings=args.rings, reference='chief'
                 )
             except ValueError:
                 good[i] = False
-                continue
-
         fig = plt.figure(figsize=(13, 8))
         batoid.plotUtils.zernikePyramid(
-            xs[good], ys[good], zs[good].T[4:], s=1, fig=fig
+            thxs[good], thys[good], zs[good,4:].T, s=1, fig=fig
         )
         plt.show()
 
     if args.show_zernike_resid:
         zs = np.zeros((args.nstar, args.jmax+1), dtype=float)
-        good = np.ones(len(xs), dtype=bool)
-        for i, (x, y) in enumerate(zip(xs, ys)):
+        good = np.ones(len(thxs), dtype=bool)
+        for i, (thx, thy) in enumerate(zip(thxs, thys)):
             try:
                 zs[i] = visit_telescope.get_zernike(
-                    np.deg2rad(x), np.deg2rad(y),
-                    jmax=args.jmax, rings=10, reference='chief'
+                    np.deg2rad(thx), np.deg2rad(thy),
+                    jmax=args.jmax, rings=args.rings, reference='chief'
                 )
                 zs[i] -= reference_telescope.get_zernike(
-                    np.deg2rad(x), np.deg2rad(y),
-                    jmax=args.jmax, rings=10, reference='chief'
+                    np.deg2rad(thx), np.deg2rad(thy),
+                    jmax=args.jmax, rings=args.rings, reference='chief'
                 )
             except ValueError:
                 good[i] = False
@@ -168,7 +169,7 @@ def main(args):
 
         fig = plt.figure(figsize=(13, 8))
         batoid.plotUtils.zernikePyramid(
-            xs[good], ys[good], zs[good].T[4:], s=1, fig=fig
+            thxs[good], thys[good], zs[good].T[4:], s=1, fig=fig
         )
         plt.show()
 
@@ -300,6 +301,7 @@ if __name__ == '__main__':
     )
     parser.add_argument("--jmax", default=28, type=int)
     parser.add_argument("--kmax", default=28, type=int)
+    parser.add_argument("--rings", default=10, type=int)
     parser.add_argument("--nstar", default=1000, type=int)
     parser.add_argument("--star_seed", default=57721, type=int)
     parser.add_argument("--reference_seed", default=5772, type=int)

@@ -25,22 +25,32 @@ def reference(args):
                 reference_rng.normal(size=2)*args.chip_rms_tilt
             ])
     factory = LSSTFactory(args.band, chips=chips)
-    reference_telescope = factory.make_visit_telescope()
+    reference_telescope = factory.make_visit_telescope()  # has chip gaps
 
     star_rng = np.random.RandomState(args.star_seed)
     focalRadius = 1.825  # degrees
     th = star_rng.uniform(0, 2*np.pi, size=args.nstar)
     ph = np.sqrt(star_rng.uniform(0, focalRadius**2, size=args.nstar))
-    xs = ph*np.cos(th)  # positions in degrees
-    ys = ph*np.sin(th)
+    thxs = ph*np.cos(th)  # positions in degrees
+    thys = ph*np.sin(th)
 
     zs = np.zeros((args.nstar, args.jmax+1), dtype=float)
-    good = np.ones(len(xs), dtype=bool)
-    for i, (x, y) in enumerate(zip(xs, ys)):
+    ccds = np.zeros(args.nstar, dtype='<U7')
+    ccdxs = np.zeros_like(thxs)
+    ccdys = np.zeros_like(thys)
+    good = np.ones(len(thxs), dtype=bool)
+    for i, (thx, thy) in enumerate(zip(thxs, thys)):
         try:
+            ccds[i] = reference_telescope.get_chip(
+                np.deg2rad(thx), np.deg2rad(thy)
+            )
             zs[i] = reference_telescope.get_zernike(
-                np.deg2rad(x), np.deg2rad(y),
+                np.deg2rad(thx), np.deg2rad(thy),
                 jmax=args.jmax, rings=10, reference='chief'
+            )
+            ccdxs[i], ccdys[i] = reference_telescope.get_fp(
+                np.deg2rad(thx), np.deg2rad(thy),
+                type='chip'
             )
         except ValueError:
             good[i] = False
@@ -49,13 +59,23 @@ def reference(args):
     if args.plot:
         fig = plt.figure(figsize=(13, 8))
         batoid.plotUtils.zernikePyramid(
-            xs[good], ys[good], zs[good].T[4:], s=1, fig=fig
+            thxs[good], thys[good], zs[good].T[4:], s=1, fig=fig
         )
         plt.show()
 
     with open(args.reference_file, 'wb') as fd:
         pickle.dump(
-            dict(xs=xs, ys=ys, zs=zs, good=good, chips=chips, args=args),
+            dict(
+                thxs=thxs,
+                thys=thys,
+                ccdxs=ccdxs,
+                ccdys=ccdys,
+                zs=zs,
+                ccds=ccds,
+                good=good,
+                chips=chips,
+                args=args
+            ),
             fd
         )
 
