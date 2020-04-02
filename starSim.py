@@ -291,6 +291,14 @@ class StarSimulator:
 
         self.telescope.traceInPlace(rays)
 
+        # Now we need to refract the beam into the Silicon.
+        silicon = batoid.TableMedium.fromTxt("silicon_dispersion.txt")
+        self.telescope['Detector'].surface.refractInPlace(
+            rays,
+            self.telescope['Detector'].inMedium,
+            silicon, coordSys=self.telescope['Detector'].coordSys
+        )
+
         # Need to convert to pixels for galsim sensor object
         # Put batoid results back into photons
         # Use the same array.
