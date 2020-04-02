@@ -205,10 +205,6 @@ class StarSimulator:
         u = r*np.cos(th)
         v = r*np.sin(th)
 
-        # import matplotlib.pyplot as plt
-        # plt.scatter(u, v, s=0.1, alpha=0.1)
-        # plt.show()
-
         # uniformly distribute photon times throughout 30s exposure
         t = np.empty(nphoton)
         ud.generate(t)
@@ -221,20 +217,11 @@ class StarSimulator:
         dku *= 1.e-9
         dkv *= 1.e-9
 
-        # import matplotlib.pyplot as plt
-        # plt.scatter(dku*206265, dkv*206265, s=0.1, alpha=0.1)
-        # plt.show()
-
         # add in second kick
         pa = galsim.PhotonArray(nphoton)
         self.second_kick._shoot(pa, rng)
         dku += pa.x*(galsim.arcsec/galsim.radians)
         dkv += pa.y*(galsim.arcsec/galsim.radians)
-
-        # import matplotlib.pyplot as plt
-        # plt.scatter(pa.x, pa.y, s=0.1, alpha=0.1)
-        # plt.scatter(dku*206265, dkv*206265, s=0.1, alpha=0.1)
-        # plt.show()
 
         # assign wavelengths.
         wavelengths = sed.sampleWavelength(nphoton, self.bandpass, rng)
@@ -277,11 +264,9 @@ class StarSimulator:
         y = v
         zPupil = self.telescope["M1"].surface.sag(0, 0.5*self.telescope.pupilSize)
         z = np.zeros_like(x)+zPupil
-        # TODO: really need to rescale velocities so that they're consistent
-        # with refractive index of air.  But medium.getN() isn't currently
-        # parallelized in batoid.  Too slow for a for-loop in python, so for
-        # now, just do the correction the effective wavelength.
-        n = self.telescope.inMedium.getN(self.wavelength)
+        # Rescale velocities so that they're consistent with the current
+        # refractive index.
+        n = self.telescope.inMedium.getN(wavelengths)
         vx /= n
         vy /= n
         vz /= n
@@ -346,8 +331,7 @@ if __name__ == '__main__':
 
     atmSettings = {
         'kcrit': 0.2,
-        # 'screen_size': 819.2,
-        'screen_size': 102.4,
+        'screen_size': 819.2,
         'screen_scale': 0.1,
         'nproc': 6,
     }
@@ -358,12 +342,17 @@ if __name__ == '__main__':
     # Put in defocus and rotation here.
     factory = LSSTFactory(observation['band'])
     visit_telescope = factory.make_visit_telescope(
-        M2_amplitude = 0.8,
-        camera_amplitude = 0.8,
-        M1M3_bend_amplitude = 0.8,
-        # M2_amplitude = 0.18,
-        # camera_amplitude = 0.18,
-        # M1M3_bend_amplitude = 0.18,
+
+        # Extreme aberrations
+        M2_amplitude = 1.0,
+        camera_amplitude = 1.0,
+        M1M3_bend_amplitude = 1.0,
+
+        # Moderate aberrations
+        # M2_amplitude = 1./sqrt(30),
+        # camera_amplitude = 1./sqrt(30),
+        # M1M3_bend_amplitude = 1./sqrt(30),
+
         rng = rng,
         rotation = observation['rotTelPos'].rad,
         defocus = 1.5e-3
