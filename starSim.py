@@ -1,12 +1,14 @@
 import multiprocessing
 import numpy as np
 from scipy.optimize import bisect
+from astropy.table import Table
 from tqdm import tqdm
 
 import galsim
 import batoid
 
 from wfTel import LSSTFactory
+from survey import Survey
 
 wavelength_dict = dict(
     u=365.49,
@@ -16,6 +18,53 @@ wavelength_dict = dict(
     z=868.21,
     y=991.66
 )
+
+
+class Survey:
+    """
+    Stores table of LSST observations.
+    
+    Parameters
+    ----------
+    table: astropy.table.Table
+        The LSST observations.
+
+    Notes
+    -----
+    The raw data is generated from the OpSim baseline_2snapsv1.4_10yrs.db database. The query sequence is:
+        .mode csv
+        .output survey.csv
+        SELECT observationId, fieldRA, fieldDec, airmass, filter, rotTelPos, rotSkyPos, skyBrightness, seeingFwhm500 FROM SummaryAllProps WHERE filter IS "r" ORDER BY random() LIMIT 10000;
+        SELECT observationId, fieldRA, fieldDec, airmass, filter, rotTelPos, rotSkyPos, skyBrightness, seeingFwhm500 FROM SummaryAllProps WHERE filter IS "r" AND observationId > 10000 LIMIT 100;
+        SELECT observationId, fieldRA, fieldDec, airmass, filter, rotTelPos, rotSkyPos, skyBrightness, seeingFwhm500 FROM SummaryAllProps WHERE filter IS "r" AND observationId > 20000 LIMIT 100;
+        SELECT observationId, fieldRA, fieldDec, airmass, filter, rotTelPos, rotSkyPos, skyBrightness, seeingFwhm500 FROM SummaryAllProps WHERE filter IS "r" AND observationId > 30000 LIMIT 100;
+        SELECT observationId, fieldRA, fieldDec, airmass, filter, rotTelPos, rotSkyPos, skyBrightness, seeingFwhm500 FROM SummaryAllProps WHERE filter IS "r" AND observationId > 40000 LIMIT 100;
+        SELECT observationId, fieldRA, fieldDec, airmass, filter, rotTelPos, rotSkyPos, skyBrightness, seeingFwhm500 FROM SummaryAllProps WHERE filter IS "r" AND observationId > 50000 LIMIT 100;
+        .output stdout
+    """
+    survey_file = 'survey.csv'
+
+    def __init__(self):
+        self.table = Table.read(Survey.survey_file, names=['observationId', 'fieldRA', 'fieldDec', 'airmass',\
+         'filter', 'rotTelPos', 'rotSkyPos', 'skyBrightness', 'seeingFwhm500'])
+
+    def get_observation(self, idx):
+        row = self.table[idx]
+        observation = {
+            'boresight': galsim.CelestialCoord(row['fieldRA']*galsim.degrees, row['fieldDec']*galsim.degrees),
+            'zenith': row['zenith']*galsim.degrees,
+            'airmass': row['airmass'],
+            'rotTelPos': row['rotTelPos']*galsim.degrees,  # zenith measured CCW from up
+            'rotSkyPos': row['rotSkyPos']*galsim.degrees,  # N measured CCW from up
+            'rawSeeing': row['seeingFwhm500']*galsim.arcsec,
+            'skyBrightness': row['skyBrightness'],
+            'band': row['filter'],
+            'exptime': 15.0,
+            'temperature': 293.15,  # K
+            'pressure': 69.328,  # kPa
+            'H2O_pressure': 1.067,  # kPa
+        }
+        return observation
 
 def BBSED(T):
     """(unnormalized) Blackbody SED for temperature T in Kelvin.
@@ -156,10 +205,6 @@ class StarSimulator:
             observation['rawSeeing'],
             self.wavelength,
             rng,
-            kcrit=atmSettings['kcrit'],
-            screen_size=atmSettings['screen_size'],
-            screen_scale=atmSettings['screen_scale'],
-            nproc=atmSettings['nproc']
         )
 
         # and pre-cache a 2nd kick
@@ -170,7 +215,7 @@ class StarSimulator:
         self.bandpass = galsim.Bandpass(
             f"LSST_{observation['band']}.dat", wave_type='nm'
         )
-
+        
         self.telescope = telescope
 
         # Develop gnomonic projection from ra/dec to field angle using
@@ -310,31 +355,13 @@ class StarSimulator:
 
 
 if __name__ == '__main__':
-    # Just make up something from OpSim database
-    # It's entirely possible that this combination is *impossible* to achieve
-    # from Cerro Pachon...
-    observation = {
-        'boresight': galsim.CelestialCoord(
-            30*galsim.degrees, 10*galsim.degrees
-        ),
-        'zenith': 30*galsim.degrees,
-        'airmass': 1.1547,
-        'rotTelPos': 35*galsim.degrees,  # zenith measured CCW from up
-        'rotSkyPos': 10*galsim.degrees,  # N measured CCW from up
-        'rawSeeing': 0.7*galsim.arcsec,
-        'band': 'i',
-        'exptime': 15.0,
-        'temperature': 293.15,  # K
-        'pressure': 69.328,  # kPa
-        'H2O_pressure': 1.067,  # kPa
-    }
+    idx = 0 # TODO: figure out how to distribute computation
+    survey = Survey()
+    observation = survey.get_observation(idx)
 
-    atmSettings = {
-        'kcrit': 0.2,
-        'screen_size': 819.2,
-        'screen_scale': 0.1,
-        'nproc': 6,
-    }
+    # for now we ensure that camera always has same rotation with respect to optical system
+    observation['rotSkyPos'] -= observation['rotTelPos']
+    observation['rotTelPos'] -= observation['rotTelPos']
 
     rng = galsim.BaseDeviate(57721)
 
