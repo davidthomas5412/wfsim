@@ -27,26 +27,46 @@ norm = {
     "camera z":        [-1.31e-05,    8.8e-06],
     "camera thx":      [-5.92e-05,   5.92e-05],  # radians
     "camera thy":      [-5.92e-05,   5.92e-05],
-    "M1M3 bend 1":     [  -0.0567,     0.0567],  # not sure?
-    "M1M3 bend 2":     [  -0.0568,     0.0567],
-    "M1M3 bend 3":     [  -0.0555,     0.0792],
-    "M1M3 bend 4":     [  -0.0608,     0.0607],
-    "M1M3 bend 5":     [    -0.06,       0.06],
-    "M1M3 bend 6":     [  -0.0575,     0.0575],
-    "M1M3 bend 7":     [  -0.0576,     0.0576],
-    "M1M3 bend 8":     [  -0.0636,     0.0636],
-    "M1M3 bend 9":     [  -0.0633,     0.0634],
-    "M1M3 bend 10":    [  -0.0605,     0.0605],
-    "M1M3 bend 11":    [  -0.0605,     0.0611],
-    "M1M3 bend 12":    [   -0.171,       0.12],
-    "M1M3 bend 13":    [  -0.0657,     0.0658],
-    "M1M3 bend 14":    [  -0.0659,     0.0659],
-    "M1M3 bend 15":    [   -0.101,      0.101],
-    "M1M3 bend 16":    [   -0.101,      0.101],
-    "M1M3 bend 17":    [  -0.0587,     0.0587],
-    "M1M3 bend 18":    [  -0.0598,     0.0598],
-    "M1M3 bend 19":    [  -0.0695,     0.0696],
-    "M1M3 bend 20":    [  -0.0696,     0.0699]
+    "M1M3 zer 1":       [-1.38e-07    9.18e-08],
+    "M1M3 zer 2":       [-6.01e-08,   6.01e-08],
+    "M1M3 zer 3":       [-6.01e-08,   6.01e-08],
+    "M1M3 zer 4":       [-9.22e-08,   9.22e-08],
+    "M1M3 zer 5":       [-9.22e-08,   9.22e-08],
+    "M1M3 zer 6":       [-6.51e-08,   6.51e-08],
+    "M1M3 zer 7":       [-6.51e-08,   6.51e-08],
+    "M1M3 zer 8":       [-1.66e-07,   1.04e-07],
+    "M1M3 zer 9":       [-7.31e-08,   7.31e-08],
+    "M1M3 zer 10":      [-7.31e-08,   7.31e-08],
+    "M1M3 zer 11":      [-6.82e-08,   6.82e-08],
+    "M1M3 zer 12":      [-6.82e-08,   6.82e-08],
+    "M1M3 zer 13":      [-1.04e-07,   1.04e-07],
+    "M1M3 zer 14":      [-1.04e-07,   1.04e-07],
+    "M1M3 zer 15":      [-7.04e-08,   7.04e-08],
+    "M1M3 zer 16":      [-7.04e-08,   7.04e-08],
+    "M1M3 zer 17":      [-6.98e-08,   6.98e-08],
+    "M1M3 zer 18":      [-6.98e-08,   6.98e-08],
+    "M1M3 zer 19":      [-9.15e-08,   7.66e-08],
+    "M1M3 zer 20":      [-7.27e-08,   7.27e-08],
+    "M2 zer 1":         [-9.62e-08,   1.44e-07],
+    "M2 zer 2":         [-9.77e-08,   9.77e-08],
+    "M2 zer 3":         [-9.77e-08,   9.77e-08],
+    "M2 zer 4":         [-1.08e-07,   1.08e-07],
+    "M2 zer 5":         [-1.08e-07,   1.08e-07],
+    "M2 zer 6":         [   -1e-07,      1e-07],
+    "M2 zer 7":         [   -1e-07,      1e-07],
+    "M2 zer 8":         [-9.07e-08,   9.79e-08],
+    "M2 zer 9":         [-9.69e-08,   9.69e-08],
+    "M2 zer 10":        [-9.69e-08,   9.69e-08],
+    "M2 zer 11":        [-1.04e-07,   1.04e-07],
+    "M2 zer 12":        [-1.04e-07,   1.04e-07],
+    "M2 zer 13":        [-9.65e-08,   9.65e-08],
+    "M2 zer 14":        [-9.65e-08,   9.65e-08],
+    "M2 zer 15":        [ -9.2e-08,    9.2e-08],
+    "M2 zer 16":        [ -9.2e-08,    9.2e-08],
+    "M2 zer 17":        [-1.08e-07,   1.08e-07],
+    "M2 zer 18":        [-1.08e-07,   1.08e-07],
+    "M2 zer 19":        [-8.29e-08,   8.18e-08],
+    "M2 zer 20":        [-9.31e-08,   9.31e-08]
 }
 
 with open("mirrorModes.pkl", 'rb') as f:
@@ -178,8 +198,8 @@ class LSSTFactory:
         M2_tilt = (0,0),
         camera_shift = (0,0,0),
         camera_tilt = (0,0),
-        M1M3_bend = None,
-        M2_bend = None,
+        M1M3_zer = None,
+        M2_zer = None,
         defocus = 0.0,
         rotation = 0.0,
         dof = None,
@@ -193,8 +213,8 @@ class LSSTFactory:
             M2_tilt = dof[3:5]
             camera_shift = dof[5:8]
             camera_tilt = dof[8:10]
-            M1M3_bend = dof[10:30]
-            # ignore M2_bend for now.
+            M1M3_zer = dof[10:30]
+            M2_zer = dof[30:50]
 
         return VisitTelescope(
             self,
@@ -202,8 +222,8 @@ class LSSTFactory:
             M2_tilt=M2_tilt,
             camera_shift=camera_shift,
             camera_tilt=camera_tilt,
-            M1M3_bend=M1M3_bend,
-            M2_bend=M2_bend,
+            M1M3_zer=M1M3_zer,
+            M2_zer=M2_zer,
             defocus=defocus,
             rotation=rotation,
             **kwargs
@@ -223,10 +243,10 @@ class VisitTelescope:
     camera_shift : 3-tuple; meters
     camera_tilt : 2-tuple; radians
     camera_amplitude : float; sets M2_shift and M2_tilt randomly
-    M1M3_bend : 20-tuple
-    M1M3_bend_amplitude : float; sets M1M3_bend randomly
-    M2_bend : 20-tuple
-    M2_bend_amplitude : float; sets M2_bend randomly
+    M1M3_zer : 20-tuple; z4-z23
+    M1M3_zer_amplitude : float; sets M1M3_zer randomly
+    M2_zer : 20-tuple; z4-z23
+    M2_zer_amplitude : float; sets M2_zer randomly
     defocus : float; meters
     rotation : float
         Camera rotation in radians.
@@ -240,10 +260,10 @@ class VisitTelescope:
         camera_shift=(0,0,0),
         camera_tilt=(0,0),
         camera_amplitude=None,
-        M1M3_bend=None,
-        M1M3_bend_amplitude=None,
-        M2_bend=None,
-        M2_bend_amplitude=None,
+        M1M3_zer=None,
+        M1M3_zer_amplitude=None,
+        M2_zer=None,
+        M2_zer_amplitude=None,
         defocus=0.0,
         rotation=0,
         rng=None
@@ -296,46 +316,33 @@ class VisitTelescope:
             camera_tilt = np.array([camera_thx, camera_thy])
             camera_tilt *= camera_amplitude
 
-        if M1M3_bend_amplitude is not None:
-            M1M3_bend = []
+        if M1M3_zer_amplitude is not None:
+            M1M3_zer = []
             for i in range(1, 21):
                 val = gd()
-                val *= np.ptp(norm[f'M1M3 bend {i}'])/2
-                val += np.mean(norm[f'M1M3 bend {i}'])
-                M1M3_bend.append(val)
-            M1M3_bend = np.array(M1M3_bend)*M1M3_bend_amplitude
+                val *= np.ptp(norm[f'M1M3 zer {i}'])/2
+                val += np.mean(norm[f'M1M3 zer {i}'])
+                M1M3_zer.append(val)
+            M1M3_zer = np.array(M1M3_zer)*M1M3_zer_amplitude
 
-        if M2_bend_amplitude is not None:
-            M2_bend = []
+        if M2_zer_amplitude is not None:
+            M2_zer = []
             for i in range(1, 21):
                 val = gd()
-                val *= np.ptp(norm[f'M2 bend {i}'])/2
-                val += np.mean(norm[f'M2 bend {i}'])
-                M2_bend.append(val)
-            M2_bend = np.array(M2_bend)*M2_bend_amplitude
+                val *= np.ptp(norm[f'M2 zer {i}'])/2
+                val += np.mean(norm[f'M2 zer {i}'])
+                M2_zer.append(val)
+            M2_zer = np.array(M2_zer)*M2_zer_amplitude
 
         self.factory = factory
         self.M2_shift = M2_shift
         self.M2_tilt = M2_tilt
         self.camera_shift = camera_shift
         self.camera_tilt = camera_tilt
-        self.M1M3_bend = M1M3_bend
-        self.M2_bend = M2_bend
+        self.M1M3_zer = M1M3_zer
+        self.M2_zer = M2_zer
         self.rotation = rotation
         self.defocus = defocus
-
-        if self.M1M3_bend is not None:
-            self.M1_grid = np.einsum(
-                'a,abc->bc', self.M1M3_bend, bendingModeDict['M1Modes']
-            )
-            self.M3_grid = np.einsum(
-                'a,abc->bc', self.M1M3_bend, bendingModeDict['M3Modes']
-            )
-
-        if self.M2_bend is not None:
-            self.M2_grid = np.einsum(
-                'a,abc->bc', self.M2_bend, bendingModeDict['M2Modes']
-            )
 
     @lazy_property
     def fiducial_telescope(self):
@@ -356,36 +363,27 @@ class VisitTelescope:
         telescope = self.fiducial_telescope
 
         M1_terms = [telescope['M1'].surface]
-        if self.M1M3_bend is not None:
-            M1_terms.append(batoid.Bicubic(
-                bendingModeDict['xgrid'],
-                bendingModeDict['ygrid'],
-                self.M1_grid
-            ))
+        if self.M1M3_zer is not None:
+            full_zer = np.concatenate((np.zeros(4), self.M1M3_zer))
+            M1_terms.append(batoid.Zernike(full_zer, R_inner=telescope['M3'].inRadius, R_outer=telescope['M1'].outRadius))
         if self.factory.M1_figure_coef is not None:
             M1_terms.append(self.factory.M1_error)
         if len(M1_terms) > 1:
             telescope = telescope.withSurface('M1', batoid.Sum(M1_terms))
 
         M2_terms = [telescope['M2'].surface]
-        if self.M2_bend is not None:
-            M2_terms.append(batoid.Bicubic(
-                bendingModeDict['xgrid'],
-                bendingModeDict['ygrid'],
-                self.M2_grid
-            ))
+        if self.M2_zer is not None:
+            full_zer = np.concatenate((np.zeros(4), self.M2_zer))
+            M2_terms.append(batoid.Zernike(full_zer, R_inner=telescope['M2'].inRadius, R_outer=telescope['M2'].outRadius))
         if self.factory.M2_figure_coef is not None:
             M2_terms.append(self.factory.M2_error)
         if len(M2_terms) > 1:
             telescope = telescope.withSurface('M2', batoid.Sum(M2_terms))
 
         M3_terms = [telescope['M3'].surface]
-        if self.M1M3_bend is not None:
-            M3_terms.append(batoid.Bicubic(
-                bendingModeDict['xgrid'],
-                bendingModeDict['ygrid'],
-                self.M3_grid
-            ))
+        if self.M1M3_zer is not None:
+            full_zer = np.concatenate((np.zeros(4), self.M1M3_zer))
+            M3_terms.append(batoid.Zernike(full_zer, R_inner=telescope['M3'].inRadius, R_outer=telescope['M1'].outRadius))
         if self.factory.M3_figure_coef is not None:
             M3_terms.append(self.factory.M3_error)
         if len(M3_terms) > 1:
