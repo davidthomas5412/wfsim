@@ -1,41 +1,18 @@
-import lsst.afw.cameraGeom as cameraGeom
 from lsst.obs.lsst import LsstCamMapper
-import lsst.obs.lsst.cameraTransforms as cameraTransforms
-
+from lsst.afw.cameraGeom.cameraSys import FOCAL_PLANE
 """Extract and pickle chip coordinates from LSST-DM software.
+   Re-ran on 4/4/20, now includes wavefront sensors.
 """
 
 camera = LsstCamMapper().camera
-lct = cameraTransforms.LsstCameraTransforms(camera)
-center = 509*4 + 0.5, 2000.5
-out = {}
+out = dict()
 for det in camera:
     name = det.getName()
-    x, y = lct.ccdPixelToFocalMm(*center, name)
-    x *= 1e-3 # mm -> m
-    y *= 1e-3
-    # Old code which kept DM x/y convention.
-    # print(f"{name}  {x:10.7f}  {y:10.7f}")
-    # left = x - 10e-6*(center[0])
-    # right = left + 10e-6*4072
-    # bottom = y - 10e-6*(center[1])
-    # top = bottom + 10e-6*4000
-
-    # New code which rotates into Camera Coordinate System
-    x, y = y, x
-    print(f"{name}  {x:10.7f}  {y:10.7f}")
-    left = x - 10e-6*(center[0])
-    right = left + 10e-6*4000
-    bottom = y - 10e-6*(center[1])
-    top = bottom + 10e-6*4072
-
+    corners = [[c.x * 1e-3, c.y * 1e-3] for c in det.getCorners(FOCAL_PLANE)]
+    center = det.getCenter(FOCAL_PLANE)
     out[name] = {
-        'left':left,
-        'right':right,
-        'bottom':bottom,
-        'top':top,
-        'x':x,
-        'y':y
+        'center': [center.x * 1e-3, center.y * 1e-3],
+        'corners': corners,
     }
 
 import pickle
