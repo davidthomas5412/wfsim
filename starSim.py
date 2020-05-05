@@ -42,6 +42,8 @@ class SimRecord:
     """
     def __init__(self, directory):
         self.directory
+        if not os.path.exists(directory):
+            os.mkdir(directory)
         self.table = Table(names=['observationId', 'sourceId', 'runId', 'fieldx', 'fieldy', 'seed', 'chip', 'filename'],
                            dtype=['i8', 'i8', 'i4', 'f4', 'f4', 'i4', 'str', 'str'])
 
@@ -80,13 +82,13 @@ class CatalogFactory:
     def __init__(self, focal_plane):
         self.focal_plane = focal_plane
 
-    def make_catalog(self, boresight, q, mag_cutoff=18, verbose=True):
+    def make_catalog(self, boresight, parallactic, mag_cutoff=18, verbose=True):
         """
         The sdss_r_mag relationship comes from 
         https://gea.esac.esa.int/archive/documentation/GDR2/Data_processing/chap_cu5pho/sec_cu5pho_calibr/ssec_cu5pho_PhotTransf.html
         viewed on 2020/4/7.
         """
-        cq, sq = np.cos(q), np.sin(q)
+        cq, sq = np.cos(parallactic), np.sin(parallactic)
         affine = galsim.AffineTransform(cq, -sq, sq, cq)
         wcs = galsim.TanWCS(
                     affine,
@@ -163,6 +165,12 @@ class Survey:
             'pressure': 69.328,  # kPa
             'H2O_pressure': 1.067,  # kPa
         }
+
+        # for now we ensure that camera always has same rotation with respect to optical system
+        observation['rotSkyPos'] -= observation['rotTelPos']
+        observation['rotTelPos'] -= observation['rotTelPos']
+        observation['parallactic'] = observation['rotTelPos'] - observation['rotSkyPos']
+        
         return observation
 
 def BBSED(T):
@@ -318,7 +326,7 @@ class StarSimulator:
 
         # Develop gnomonic projection from ra/dec to field angle using
         # GalSim TanWCS class.
-        q = observation['rotTelPos'] - observation['rotSkyPos']
+        q = observation['parallactic']
         cq, sq = np.cos(q), np.sin(q)
         affine = galsim.AffineTransform(cq, -sq, sq, cq)
         self.radecToField = galsim.TanWCS(
@@ -454,14 +462,14 @@ class StarSimulator:
 
 if __name__ == '__main__':
     idx = 0 # TODO: figure out how to distribute computation
+    runId = 0
+    seed = 7
+
+    sr = SimRecord('/labs/khatrilab/scottmk/david/wfsim/record')
     survey = Survey()
     observation = survey.get_observation(idx)
-
-    # for now we ensure that camera always has same rotation with respect to optical system
-    observation['rotSkyPos'] -= observation['rotTelPos']
-    observation['rotTelPos'] -= observation['rotTelPos']
-
-    rng = galsim.BaseDeviate(57721)
+    catalog = CatalogFactory.make_catalog(observation['boresight'], observation['parallactic'], mag_cutoff=20)
+    rng = galsim.BaseDeviate(seed)
 
     # Could put in chip-to-chip information here.  Omit for the moment.
     # Put in defocus and rotation here.
@@ -490,41 +498,22 @@ if __name__ == '__main__':
         rng=rng,
     )
 
-    ras = []
-    decs = []
-    Ts = []
-    for _ in range(100):
-        dist = 100*galsim.degrees
-        while dist > 1.9*galsim.degrees:
-            ra = np.random.uniform(28.0, 32.0)
-            dec = np.random.uniform(8.0, 12.0)
-            coord = galsim.CelestialCoord(
-                ra*galsim.degrees, dec*galsim.degrees
-            )
-            dist = observation['boresight'].distanceTo(coord)
-        ras.append(ra)
-        decs.append(dec)
-        Ts.append(np.random.uniform(4000, 10000))
-
-    import matplotlib.pyplot as plt
-    plt.axis()
-    plt.ion()
-    plt.show()
-    for ra, dec, T in zip(tqdm(ras), decs, Ts):
-        coord = galsim.CelestialCoord(
-            ra*galsim.degrees, dec*galsim.degrees
-        )
+    for i,row in enumerate(catalog):
+        if not row['teff_val']:
+            T = np.random.uniform(4000, 10000)
+        coord = galsim.CelestialCoord(row['ra'] * galsim.degrees, row['dec'] * galsim.degrees)
         sed = BBSED(T)
-        nphoton = int(1e6)
+        nphoton = nphotons(row['sdss_r_mag'])
         starImage, starPhotons = simulator.simStar(
             coord, sed, nphoton, rng, return_photons=True
         )
-
-        plt.imshow(starImage.array)
-        plt.draw()
-        plt.pause(0.1)
-
+        filename = f'{i}'
+        fieldx = np.mean(starPhotons.x)
+        fieldy = np.mean(starPhotons.y)
+        sr.write(observation['observationId'], catalog['source_id'], runId, fieldx, fieldy, seed, catalog['chip'], filename, starImage)
+        
+        # Do we want to use this?
         field = simulator.radecToField.toImage(coord)
+
+        # Need to add atmosphere.
         zernikes = visit_telescope.get_zernike(field.x, field.y, jmax=11)
-        for j in range(4, 12):
-            print(f"Z{j:<4}  {zernikes[j]:7.3f}")
