@@ -9,6 +9,7 @@ from astroquery.gaia import Gaia
 import galsim
 import batoid
 import pickle
+import os
 
 from wfTel import LSSTFactory
 from survey import Survey
@@ -21,6 +22,48 @@ wavelength_dict = dict(
     z=868.21,
     y=991.66
 )
+
+# source: https://smtn-002.lsst.io
+zero_points = dict(
+    u=26.50,
+    g=28.30,
+    r=28.13,
+    i=27.79,
+    z=27.40,
+    y=26.58
+)
+
+def nphotons(mag, band='r', exptime=15):
+    return exptime * 10 ** ((zero_points[band] - mag) / 2.5)
+
+class SimRecord:
+    """
+    Metadata for simulations.
+    """
+    def __init__(self, directory):
+        self.directory
+        self.table = Table(names=['observationId', 'sourceId', 'runId', 'fieldx', 'fieldy', 'seed', 'chip', 'filename'],
+                           dtype=['i8', 'i8', 'i4', 'f4', 'f4', 'i4', 'str', 'str'])
+
+    def write(self, observationId, sourceId, runId, fieldx, fieldy, seed, chip, filename, image):
+        full_path = os.path.join(self.directory, filename)
+        np.save(full_path, image)
+        self.table.add_row([observationId, sourceId, runId, fieldx, fieldy, seed, chip, filename])
+
+    def close(self):
+        table_path = os.path.join(self.directory, 'record.csv')
+        self.table.write(table_path, overwrite=True)
+
+    def __del__(self):
+        self.close()
+
+    @staticmethod
+    def combine(in_glob, out_dir):
+        tables = [Table.read(f) for f in glob.glob(in_glob) if 'record.csv' in f]
+        os.mkdir(out_dir)
+        out_path = os.path.join(out_dir, 'record.csv')
+        stacked = vstack(tables)
+        stacked.write(out_path, overwrite=True)
 
 class FocalPlane:
     """
