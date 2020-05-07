@@ -5,6 +5,7 @@ from astropy.table import Table
 from tqdm import tqdm
 from astropy.table import Table, vstack
 from astroquery.gaia import Gaia
+from bisect import bisect_left
 
 import galsim
 import batoid
@@ -12,7 +13,6 @@ import pickle
 import os
 
 from wfTel import LSSTFactory
-from survey import Survey
 
 wavelength_dict = dict(
     u=365.49,
@@ -24,17 +24,42 @@ wavelength_dict = dict(
 )
 
 # source: https://smtn-002.lsst.io
-zero_points = dict(
-    u=26.50,
-    g=28.30,
-    r=28.13,
-    i=27.79,
-    z=27.40,
-    y=26.58
+sky_background = dict(
+    u=22.95,
+    g=22.24,
+    r=21.20,
+    i=20.47,
+    z=19.60,
+    y=18.63
 )
 
-def nphotons(mag, band='r', exptime=15):
-    return exptime * 10 ** ((zero_points[band] - mag) / 2.5)
+class Flux:
+    # precomputed in transmission.py
+    __cache = np.load('transmission_cache.npy')
+
+    @staticmethod
+    def nphotons(sdss_mag_r, T, band='r', exptime=15):
+        """
+        See flux_notes.pdf for details and assumptions.
+
+        Only r-band is supported.
+        """
+        if band != 'r':
+            raise ValueError('Only support r-band for the time being')
+        sdss_mag_zero_r = 24.80
+        A_lsst = np.pi * (4.18 ** 2 - 2.558 ** 2)
+        
+        l = min(bisect_left(Flux.__cache[:,0], T), Flux.__cache.shape[0] - 1)
+        r = min(l + 1, Flux.__cache.shape[0] - 1)
+        if r == l:
+            ratio = Flux.__cache[l,1]
+        else:
+            # interpolate
+            ratio = Flux.__cache[l,1] * (Flux.__cache[r,0] - T) + Flux.__cache[r,1] * (T - Flux.__cache[l,0]) 
+            ratio /= (Flux.__cache[r,0] - Flux.__cache[l,0])
+        
+        nphot = A_lsst * exptime * 10 ** ((sdss_mag_zero_r - sdss_mag_r) / 2.5) * ratio
+        return nphot
 
 class SimRecord:
     """
@@ -148,7 +173,7 @@ class Survey:
 
     def __init__(self):
         self.table = Table.read(Survey.survey_file, names=['observationId', 'fieldRA', 'fieldDec', 'airmass',\
-         'filter', 'rotTelPos', 'rotSkyPos', 'skyBrightness', 'seeingFwhm500'])
+         'filter', 'rotTelPos', 'rotSkyPos', 'skyBrightness', 'seeingFwhm500'], header=None)
 
     def get_observation(self, idx):
         row = self.table[idx]
@@ -335,7 +360,6 @@ class StarSimulator:
             units=galsim.radians
         )
 
-
     def simStar(self, coord, sed, nphoton, rng, return_photons=False):
         fieldAngle = self.radecToField.toImage(coord)
         # Populate pupil
@@ -503,7 +527,9 @@ if __name__ == '__main__':
             T = np.random.uniform(4000, 10000)
         coord = galsim.CelestialCoord(row['ra'] * galsim.degrees, row['dec'] * galsim.degrees)
         sed = BBSED(T)
-        nphoton = nphotons(row['sdss_r_mag'])
+
+        # Cutoff mags greater than 14.
+        nphoton = Flux.nphotons(max(row['sdss_r_mag'], 14), T)
         starImage, starPhotons = simulator.simStar(
             coord, sed, nphoton, rng, return_photons=True
         )
