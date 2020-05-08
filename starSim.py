@@ -6,6 +6,7 @@ from tqdm import tqdm
 from astropy.table import Table, vstack
 from astroquery.gaia import Gaia
 from bisect import bisect_left
+from galsim.utilities import lazy_property
 
 import galsim
 import batoid
@@ -61,21 +62,45 @@ class Flux:
         nphot = A_lsst * exptime * 10 ** ((sdss_mag_zero_r - sdss_mag_r) / 2.5) * ratio
         return nphot
 
+    @staticmethod
+    def BBSED(T):
+        """(unnormalized) Blackbody SED for temperature T in Kelvin.
+        """
+        waves_nm = np.arange(330.0, 1120.0, 10.0)
+        def planck(t, w):
+            # t in K
+            # w in m
+            c = 2.99792458e8  # speed of light in m/s
+            kB = 1.3806488e-23  # Boltzmann's constant J per Kelvin
+            h = 6.62607015e-34  # Planck's constant in J s
+            return w**(-5) / (np.exp(h*c/(w*kB*t))-1)
+        flambda = planck(T, waves_nm*1e-9)
+        return galsim.SED(
+            galsim.LookupTable(waves_nm, flambda),
+            wave_type='nm',
+            flux_type='flambda'
+        )
+
 class SimRecord:
     """
     Metadata for simulations.
     """
     def __init__(self, directory):
-        self.directory
+        self.idx = 0
+        self.directory = directory
         if not os.path.exists(directory):
             os.mkdir(directory)
-        self.table = Table(names=['observationId', 'sourceId', 'runId', 'fieldx', 'fieldy', 'seed', 'chip', 'filename'],
-                           dtype=['i8', 'i8', 'i4', 'f4', 'f4', 'i4', 'str', 'str'])
 
-    def write(self, observationId, sourceId, runId, fieldx, fieldy, seed, chip, filename, image):
-        full_path = os.path.join(self.directory, filename)
-        np.save(full_path, image)
-        self.table.add_row([observationId, sourceId, runId, fieldx, fieldy, seed, chip, filename])
+        self.table = Table(names=['idx', 'observationId', 'sourceId', 'runId', 'fieldx', 'fieldy', 'posx', 'posy', 'parallactic', 'airmass', 'seed', 'chip'],
+                           dtype=['i4', 'i8', 'i8', 'i4', 'f4', 'f4', 'f4', 'f4', 'f4', 'f4', 'i4', 'str'])
+
+    def write(self, observationId, sourceId, runId, fieldx, fieldy, posx, posy, parallactic, airmass, seed, chip, starImage, zernikes):
+        img_path = os.path.join(self.directory, f'{self.idx}.image')
+        zer_path = os.path.join(self.directory, f'{self.idx}.zernike')
+        np.save(open(img_path, 'wb'), starImage)
+        np.save(open(zer_path, 'wb'), zernikes)
+        self.table.add_row([self.idx, observationId, sourceId, runId, fieldx, fieldy, posx, posy, parallactic, airmass, seed, chip])
+        self.idx += 1
 
     def close(self):
         table_path = os.path.join(self.directory, 'record.csv')
@@ -198,125 +223,108 @@ class Survey:
         
         return observation
 
-def BBSED(T):
-    """(unnormalized) Blackbody SED for temperature T in Kelvin.
-    """
-    waves_nm = np.arange(330.0, 1120.0, 10.0)
-    def planck(t, w):
-        # t in K
-        # w in m
-        c = 2.99792458e8  # speed of light in m/s
-        kB = 1.3806488e-23  # Boltzmann's constant J per Kelvin
-        h = 6.62607015e-34  # Planck's constant in J s
-        return w**(-5) / (np.exp(h*c/(w*kB*t))-1)
-    flambda = planck(T, waves_nm*1e-9)
-    return galsim.SED(
-        galsim.LookupTable(waves_nm, flambda),
-        wave_type='nm',
-        flux_type='flambda'
-    )
+class Atmosphere:
+    @staticmethod
+    def _vkSeeing(r0_500, wavelength, L0):
+        # von Karman profile FWHM from Tokovinin fitting formula
+        kolm_seeing = galsim.Kolmogorov(r0_500=r0_500, lam=wavelength).fwhm
+        r0 = r0_500 * (wavelength/500)**1.2
+        arg = 1. - 2.183*(r0/L0)**0.356
+        factor = np.sqrt(arg) if arg > 0.0 else 0.0
+        return kolm_seeing*factor
 
+    @staticmethod
+    def _seeingResid(r0_500, wavelength, L0, targetSeeing):
+        return Atmosphere._vkSeeing(r0_500, wavelength, L0) - targetSeeing
 
-def _vkSeeing(r0_500, wavelength, L0):
-    # von Karman profile FWHM from Tokovinin fitting formula
-    kolm_seeing = galsim.Kolmogorov(r0_500=r0_500, lam=wavelength).fwhm
-    r0 = r0_500 * (wavelength/500)**1.2
-    arg = 1. - 2.183*(r0/L0)**0.356
-    factor = np.sqrt(arg) if arg > 0.0 else 0.0
-    return kolm_seeing*factor
+    @staticmethod
+    def _r0_500(wavelength, L0, targetSeeing):
+        """Returns r0_500 to use to get target seeing."""
+        r0_500_max = min(1.0, L0*(1./2.183)**(-0.356)*(wavelength/500.)**1.2)
+        r0_500_min = 0.01
+        return bisect(
+            Atmosphere._seeingResid,
+            r0_500_min,
+            r0_500_max,
+            args=(wavelength, L0, targetSeeing)
+        )
 
+    @staticmethod
+    def makeAtmosphere(
+        airmass,
+        rawSeeing,
+        wavelength,
+        rng,
+        kcrit=0.2,
+        screen_size=819.2,
+        screen_scale=0.1,
+        nproc=6
+    ):
+        targetFWHM = (
+            rawSeeing/galsim.arcsec *
+            airmass**0.6 *
+            (wavelength/500.0)**(-0.3)
+        )
 
-def _seeingResid(r0_500, wavelength, L0, targetSeeing):
-    return _vkSeeing(r0_500, wavelength, L0) - targetSeeing
+        ud = galsim.UniformDeviate(rng)
+        gd = galsim.GaussianDeviate(rng)
 
+        # Use values measured from Ellerbroek 2008.
+        altitudes = [0.0, 2.58, 5.16, 7.73, 12.89, 15.46]
+        # Elevate the ground layer though.  Otherwise, PSFs come out too correlated
+        # across the field of view.
+        altitudes[0] = 0.2
 
-def _r0_500(wavelength, L0, targetSeeing):
-    """Returns r0_500 to use to get target seeing."""
-    r0_500_max = min(1.0, L0*(1./2.183)**(-0.356)*(wavelength/500.)**1.2)
-    r0_500_min = 0.01
-    return bisect(
-        _seeingResid,
-        r0_500_min,
-        r0_500_max,
-        args=(wavelength, L0, targetSeeing)
-    )
+        # Use weights from Ellerbroek too, but add some random perturbations.
+        weights = [0.652, 0.172, 0.055, 0.025, 0.074, 0.022]
+        weights = [np.abs(w*(1.0 + 0.1*gd())) for w in weights]
+        weights = np.clip(weights, 0.01, 0.8)  # keep weights from straying too far.
+        weights /= np.sum(weights)  # renormalize
 
+        # Draw outer scale from truncated log normal
+        L0 = 0
+        while L0 < 10.0 or L0 > 100:
+            L0 = np.exp(gd() * 0.6 + np.log(25.0))
+        # Given the desired targetFWHM and randomly selected L0, determine
+        # appropriate r0_500
+        r0_500 = Atmosphere._r0_500(wavelength, L0, targetFWHM)
 
-def makeAtmosphere(
-    airmass,
-    rawSeeing,
-    wavelength,
-    rng,
-    kcrit=0.2,
-    screen_size=819.2,
-    screen_scale=0.1,
-    nproc=6
-):
-    targetFWHM = (
-        rawSeeing/galsim.arcsec *
-        airmass**0.6 *
-        (wavelength/500.0)**(-0.3)
-    )
+        # Broadcast common outer scale across all layers
+        L0 = [L0]*6
 
-    ud = galsim.UniformDeviate(rng)
-    gd = galsim.GaussianDeviate(rng)
+        # Uniformly draw layer speeds between 0 and max_speed.
+        maxSpeed = 20.0
+        speeds = [ud()*maxSpeed for _ in range(6)]
+        # Isotropically draw directions.
+        directions = [ud()*360.0*galsim.degrees for _ in range(6)]
 
-    # Use values measured from Ellerbroek 2008.
-    altitudes = [0.0, 2.58, 5.16, 7.73, 12.89, 15.46]
-    # Elevate the ground layer though.  Otherwise, PSFs come out too correlated
-    # across the field of view.
-    altitudes[0] = 0.2
+        atmKwargs = dict(
+            r0_500=r0_500,
+            L0=L0,
+            speed=speeds,
+            direction=directions,
+            altitude=altitudes,
+            r0_weights=weights,
+            rng=rng,
+            screen_size=screen_size,
+            screen_scale=screen_scale
+        )
 
-    # Use weights from Ellerbroek too, but add some random perturbations.
-    weights = [0.652, 0.172, 0.055, 0.025, 0.074, 0.022]
-    weights = [np.abs(w*(1.0 + 0.1*gd())) for w in weights]
-    weights = np.clip(weights, 0.01, 0.8)  # keep weights from straying too far.
-    weights /= np.sum(weights)  # renormalize
+        ctx = multiprocessing.get_context('fork')
+        atm = galsim.Atmosphere(mp_context=ctx, **atmKwargs)
 
-    # Draw outer scale from truncated log normal
-    L0 = 0
-    while L0 < 10.0 or L0 > 100:
-        L0 = np.exp(gd() * 0.6 + np.log(25.0))
-    # Given the desired targetFWHM and randomly selected L0, determine
-    # appropriate r0_500
-    r0_500 = _r0_500(wavelength, L0, targetFWHM)
+        r0_500 = atm.r0_500_effective
+        r0 = r0_500 * (wavelength/500.0)**(6./5)
+        kmax = kcrit/r0
 
-    # Broadcast common outer scale across all layers
-    L0 = [L0]*6
+        with ctx.Pool(
+            nproc,
+            initializer=galsim.phase_screens.initWorker,
+            initargs=galsim.phase_screens.initWorkerArgs()
+        ) as pool:
+            atm.instantiate(pool=pool, kmax=kmax, check='phot')
 
-    # Uniformly draw layer speeds between 0 and max_speed.
-    maxSpeed = 20.0
-    speeds = [ud()*maxSpeed for _ in range(6)]
-    # Isotropically draw directions.
-    directions = [ud()*360.0*galsim.degrees for _ in range(6)]
-
-    atmKwargs = dict(
-        r0_500=r0_500,
-        L0=L0,
-        speed=speeds,
-        direction=directions,
-        altitude=altitudes,
-        r0_weights=weights,
-        rng=rng,
-        screen_size=screen_size,
-        screen_scale=screen_scale
-    )
-
-    ctx = multiprocessing.get_context('fork')
-    atm = galsim.Atmosphere(mp_context=ctx, **atmKwargs)
-
-    r0_500 = atm.r0_500_effective
-    r0 = r0_500 * (wavelength/500.0)**(6./5)
-    kmax = kcrit/r0
-
-    with ctx.Pool(
-        nproc,
-        initializer=galsim.phase_screens.initWorker,
-        initargs=galsim.phase_screens.initWorkerArgs()
-    ) as pool:
-        atm.instantiate(pool=pool, kmax=kmax, check='phot')
-
-    return atm
+        return atm
 
 
 class StarSimulator:
@@ -329,19 +337,8 @@ class StarSimulator:
         if rng is None:
             rng = galsim.BaseDeviate()
         self.observation = observation
-
         self.wavelength = wavelength_dict[observation['band']]
-        self.atm = makeAtmosphere(
-            observation['airmass'],
-            observation['rawSeeing'],
-            self.wavelength,
-            rng,
-        )
-
-        # and pre-cache a 2nd kick
-        psf = self.atm.makePSF(self.wavelength, diam=8.36)
-        _ = psf.drawImage(nx=1, ny=1, n_photons=1, rng=rng, method='phot')
-        self.second_kick = psf.second_kick
+        self.rng = rng
 
         self.bandpass = galsim.Bandpass(
             f"LSST_{observation['band']}.dat", wave_type='nm'
@@ -360,7 +357,29 @@ class StarSimulator:
             units=galsim.radians
         )
 
-    def simStar(self, coord, sed, nphoton, rng, return_photons=False):
+    @lazy_property
+    def atm(self):
+        return makeAtmosphere(
+            self.observation['airmass'],
+            self.observation['rawSeeing'],
+            self.wavelength,
+            self.rng,
+        )
+
+    @lazy_property
+    def second_kick(self):
+        # and pre-cache a 2nd kick
+        psf = self.atm.makePSF(self.wavelength, diam=8.36)
+        _ = psf.drawImage(nx=1, ny=1, n_photons=1, rng=rng, method='phot')
+        return psf.second_kick
+
+    def simStar(self, coord, sed, nphoton, rng, mode='optic'):
+        """
+        The three modes:
+        - optic: start rays from entrance pupil.
+        - atm_high: include all effects except the first kick (low spatial order atmospheric contribution).
+        - full: atm_high with the first kick (low spatial order atmospheric contribution).
+        """
         fieldAngle = self.radecToField.toImage(coord)
         # Populate pupil
         r_outer = 8.36/2
@@ -380,49 +399,55 @@ class StarSimulator:
         u = r*np.cos(th)
         v = r*np.sin(th)
 
-        # uniformly distribute photon times throughout 30s exposure
+        # uniformly distribute photon times throughout 15s exposure
         t = np.empty(nphoton)
         ud.generate(t)
         t *= self.observation['exptime']
 
-        # evaluate phase gradients at appropriate location/time
-        dku, dkv = self.atm.wavefront_gradient(
-            u, v, t, (fieldAngle.x*galsim.radians, fieldAngle.y*galsim.radians)
-        )  # output is in nm per m.  convert to radians
-        dku *= 1.e-9
-        dkv *= 1.e-9
+        if mode == 'full':
+            # evaluate phase gradients at appropriate location/time
+            dku, dkv = self.atm.wavefront_gradient(
+                u, v, t, (fieldAngle.x*galsim.radians, fieldAngle.y*galsim.radians)
+            )  # output is in nm per m.  convert to radians
+            dku *= 1.e-9
+            dkv *= 1.e-9
+        else:
+            dku = np.zeros(nphoton)
+            dkv = np.zeros(nphoton)
 
-        # add in second kick
-        pa = galsim.PhotonArray(nphoton)
-        self.second_kick._shoot(pa, rng)
-        dku += pa.x*(galsim.arcsec/galsim.radians)
-        dkv += pa.y*(galsim.arcsec/galsim.radians)
+        if mode in {'full', 'atm_high'}:
+            # add in second kick
+            pa = galsim.PhotonArray(nphoton)
+            self.second_kick._shoot(pa, rng)
+            dku += pa.x*(galsim.arcsec/galsim.radians)
+            dkv += pa.y*(galsim.arcsec/galsim.radians)
 
         # assign wavelengths.
         wavelengths = sed.sampleWavelength(nphoton, self.bandpass, rng)
 
-        # Chromatic seeing.  Scale deflections by (lam/500)**(-0.3)
-        dku *= (wavelengths/500)**(-0.3)
-        dkv *= (wavelengths/500)**(-0.3)
+        if mode in {'full', 'atm_high'}:
+            # Chromatic seeing.  Scale deflections by (lam/500)**(-0.3)
+            dku *= (wavelengths/500)**(-0.3)
+            dkv *= (wavelengths/500)**(-0.3)
 
-        # DCR.  dkv is aligned along meridian, so only need to shift in this
-        # direction (I think)
-        base_refraction = galsim.dcr.get_refraction(
-            self.wavelength,
-            self.observation['zenith'],
-            temperature=self.observation['temperature'],
-            pressure=self.observation['pressure'],
-            H2O_pressure=self.observation['H2O_pressure'],
-        )
-        refraction = galsim.dcr.get_refraction(
-            wavelengths,
-            self.observation['zenith'],
-            temperature=self.observation['temperature'],
-            pressure=self.observation['pressure'],
-            H2O_pressure=self.observation['H2O_pressure'],
-        )
-        refraction -= base_refraction
-        dkv += refraction
+            # DCR.  dkv is aligned along meridian, so only need to shift in this
+            # direction (I think)
+            base_refraction = galsim.dcr.get_refraction(
+                self.wavelength,
+                self.observation['zenith'],
+                temperature=self.observation['temperature'],
+                pressure=self.observation['pressure'],
+                H2O_pressure=self.observation['H2O_pressure'],
+            )
+            refraction = galsim.dcr.get_refraction(
+                wavelengths,
+                self.observation['zenith'],
+                temperature=self.observation['temperature'],
+                pressure=self.observation['pressure'],
+                H2O_pressure=self.observation['H2O_pressure'],
+            )
+            refraction -= base_refraction
+            dkv += refraction
 
         # We're through the atmosphere!  Make a structure that batoid can use
         # now.  Note we're going to just do the sum in the tangent plane
@@ -472,16 +497,14 @@ class StarSimulator:
         # sensor = galsim.Sensor()
         sensor = galsim.SiliconSensor()
         image = galsim.Image(256, 256)  # hard code for now
-        image.setCenter(
-            int(np.mean(pa.x[~rays.vignetted])),
-            int(np.mean(pa.y[~rays.vignetted]))
-        )
+        image.setCenter(int(np.mean(pa.x[~rays.vignetted])), 
+            int(np.mean(pa.y[~rays.vignetted])))
         sensor.accumulate(pa, image)
 
-        if return_photons:
-            return image, pa
-        else:
-            return image
+        pos_x = np.mean(rays.x[~rays.vignetted])
+        pos_y = np.mean(rays.y[~rays.vignetted])
+
+        return image, pos_x, pos_y
 
 
 if __name__ == '__main__':
@@ -516,30 +539,36 @@ if __name__ == '__main__':
     )
     telescope = visit_telescope.actual_telescope
 
+
     simulator = StarSimulator(
         observation,
         telescope,
         rng=rng,
     )
 
+    telescope.get_zernike()
+
     for i,row in enumerate(catalog):
         if not row['teff_val']:
             T = np.random.uniform(4000, 10000)
         coord = galsim.CelestialCoord(row['ra'] * galsim.degrees, row['dec'] * galsim.degrees)
-        sed = BBSED(T)
+        sed = Flux.BBSED(T)
 
         # Cutoff mags greater than 14.
         nphoton = Flux.nphotons(max(row['sdss_r_mag'], 14), T)
-        starImage, starPhotons = simulator.simStar(
+        starImage, pix_x, pix_y = simulator.simStar(
             coord, sed, nphoton, rng, return_photons=True
         )
+
+
+        # wavefront
+        field = simulator.radecToField.toImage(coord)
+        zernikes = visit_telescope.get_zernike(fieldAngle.x*galsim.radians, fieldAngle.y*galsim.radians, jmax=11)
+        
+        # write
         filename = f'{i}'
         fieldx = np.mean(starPhotons.x)
         fieldy = np.mean(starPhotons.y)
-        sr.write(observation['observationId'], catalog['source_id'], runId, fieldx, fieldy, seed, catalog['chip'], filename, starImage)
+        sr.write(observation['observationId'], catalog['source_id'], runId, fieldAngle.x*galsim.radians, fieldAngle.y*galsim.radians, 
+                pos_x, pos_y, observation['parallactic'], observation['airmass'], seed, catalog['chip'], filename, starImage, zernikes)
         
-        # Do we want to use this?
-        field = simulator.radecToField.toImage(coord)
-
-        # Need to add atmosphere.
-        zernikes = visit_telescope.get_zernike(field.x, field.y, jmax=11)
