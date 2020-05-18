@@ -15,24 +15,6 @@ import os
 
 from wfTel import LSSTFactory
 
-wavelength_dict = dict(
-    u=365.49,
-    g=480.03,
-    r=622.20,
-    i=754.06,
-    z=868.21,
-    y=991.66
-)
-
-# source: https://smtn-002.lsst.io
-sky_background = dict(
-    u=22.95,
-    g=22.24,
-    r=21.20,
-    i=20.47,
-    z=19.60,
-    y=18.63
-)
 
 class Flux:
     # precomputed in transmission.py
@@ -60,7 +42,7 @@ class Flux:
             ratio /= (Flux.__cache[r,0] - Flux.__cache[l,0])
         
         nphot = A_lsst * exptime * 10 ** ((sdss_mag_zero_r - sdss_mag_r) / 2.5) * ratio
-        return nphot
+        return int(nphot)
 
     @staticmethod
     def BBSED(T):
@@ -88,18 +70,17 @@ class SimRecord:
     def __init__(self, directory):
         self.idx = 0
         self.directory = directory
-        if not os.path.exists(directory):
-            os.mkdir(directory)
+        os.makedirs(directory, exist_ok=True)
 
-        self.table = Table(names=['idx', 'observationId', 'sourceId', 'runId', 'fieldx', 'fieldy', 'posx', 'posy', 'parallactic', 'airmass', 'seed', 'chip'],
-                           dtype=['i4', 'i8', 'i8', 'i4', 'f4', 'f4', 'f4', 'f4', 'f4', 'f4', 'i4', 'str'])
+        self.table = Table(names=['idx', 'observationId', 'sourceId', 'runId', 'fieldx', 'fieldy', 'posx', 'posy', 'parallactic', 'airmass', 'zenith', 'seed', 'chip'],
+                           dtype=['i4', 'i8', 'i8', 'i4', 'f4', 'f4', 'f4', 'f4', 'f4', 'f4', 'f4', 'i4', 'str'])
 
-    def write(self, observationId, sourceId, runId, fieldx, fieldy, posx, posy, parallactic, airmass, seed, chip, starImage, zernikes):
+    def write(self, observationId, sourceId, runId, fieldx, fieldy, posx, posy, parallactic, airmass, zenith, seed, chip, starImage, zernikes):
         img_path = os.path.join(self.directory, f'{self.idx}.image')
         zer_path = os.path.join(self.directory, f'{self.idx}.zernike')
         np.save(open(img_path, 'wb'), starImage)
         np.save(open(zer_path, 'wb'), zernikes)
-        self.table.add_row([self.idx, observationId, sourceId, runId, fieldx, fieldy, posx, posy, parallactic, airmass, seed, chip])
+        self.table.add_row([self.idx, observationId, sourceId, runId, fieldx, fieldy, posx, posy, parallactic, airmass, zenith, seed, chip])
         self.idx += 1
 
     def close(self):
@@ -151,7 +132,11 @@ class CatalogFactory:
             corners = np.array(positions['corners_field'])
             ra, dec = wcs.toWorld(corners[:,0], corners[:,1], units=galsim.degrees)
             result = CatalogFactory.__chip_table(ra, dec, mag_cutoff, verbose)
-            result['name'] = name
+            mask = np.logical_or(
+                np.logical_or(result['phot_g_mean_mag'].mask, result['phot_bp_mean_mag'].mask), 
+                result['phot_rp_mean_mag'].mask)
+            result = result[[~mask]]
+            result['chip'] = name
             stack.append(result)
         stack = vstack(stack)
         
@@ -186,23 +171,24 @@ class Survey:
     The raw data is generated from the OpSim baseline_2snapsv1.4_10yrs.db database. The query sequence is:
         .mode csv
         .output survey.csv
-        SELECT observationId, fieldRA, fieldDec, airmass, filter, rotTelPos, rotSkyPos, skyBrightness, seeingFwhm500 FROM SummaryAllProps WHERE filter IS "r" ORDER BY random() LIMIT 10000;
-        SELECT observationId, fieldRA, fieldDec, airmass, filter, rotTelPos, rotSkyPos, skyBrightness, seeingFwhm500 FROM SummaryAllProps WHERE filter IS "r" AND observationId > 10000 LIMIT 100;
-        SELECT observationId, fieldRA, fieldDec, airmass, filter, rotTelPos, rotSkyPos, skyBrightness, seeingFwhm500 FROM SummaryAllProps WHERE filter IS "r" AND observationId > 20000 LIMIT 100;
-        SELECT observationId, fieldRA, fieldDec, airmass, filter, rotTelPos, rotSkyPos, skyBrightness, seeingFwhm500 FROM SummaryAllProps WHERE filter IS "r" AND observationId > 30000 LIMIT 100;
-        SELECT observationId, fieldRA, fieldDec, airmass, filter, rotTelPos, rotSkyPos, skyBrightness, seeingFwhm500 FROM SummaryAllProps WHERE filter IS "r" AND observationId > 40000 LIMIT 100;
-        SELECT observationId, fieldRA, fieldDec, airmass, filter, rotTelPos, rotSkyPos, skyBrightness, seeingFwhm500 FROM SummaryAllProps WHERE filter IS "r" AND observationId > 50000 LIMIT 100;
+        SELECT observationId, fieldRA, fieldDec, airmass, altitude, filter, rotTelPos, rotSkyPos, skyBrightness, seeingFwhm500 FROM SummaryAllProps WHERE filter IS "r" ORDER BY random() LIMIT 10000;
+        SELECT observationId, fieldRA, fieldDec, airmass, altitude, filter, rotTelPos, rotSkyPos, skyBrightness, seeingFwhm500 FROM SummaryAllProps WHERE filter IS "r" AND observationId > 10000 LIMIT 100;
+        SELECT observationId, fieldRA, fieldDec, airmass, altitude, filter, rotTelPos, rotSkyPos, skyBrightness, seeingFwhm500 FROM SummaryAllProps WHERE filter IS "r" AND observationId > 20000 LIMIT 100;
+        SELECT observationId, fieldRA, fieldDec, airmass, altitude, filter, rotTelPos, rotSkyPos, skyBrightness, seeingFwhm500 FROM SummaryAllProps WHERE filter IS "r" AND observationId > 30000 LIMIT 100;
+        SELECT observationId, fieldRA, fieldDec, airmass, altitude, filter, rotTelPos, rotSkyPos, skyBrightness, seeingFwhm500 FROM SummaryAllProps WHERE filter IS "r" AND observationId > 40000 LIMIT 100;
+        SELECT observationId, fieldRA, fieldDec, airmass, altitude, filter, rotTelPos, rotSkyPos, skyBrightness, seeingFwhm500 FROM SummaryAllProps WHERE filter IS "r" AND observationId > 50000 LIMIT 100;
         .output stdout
     """
     survey_file = 'survey.csv'
 
     def __init__(self):
         self.table = Table.read(Survey.survey_file, names=['observationId', 'fieldRA', 'fieldDec', 'airmass',\
-         'filter', 'rotTelPos', 'rotSkyPos', 'skyBrightness', 'seeingFwhm500'], header=None)
+         'altitude', 'filter', 'rotTelPos', 'rotSkyPos', 'skyBrightness', 'seeingFwhm500'])
 
     def get_observation(self, idx):
         row = self.table[idx]
         observation = {
+            'observationId': row['observationId'],
             'boresight': galsim.CelestialCoord(row['fieldRA']*galsim.degrees, row['fieldDec']*galsim.degrees),
             'airmass': row['airmass'],
             'rotTelPos': row['rotTelPos']*galsim.degrees,  # zenith measured CCW from up
@@ -210,6 +196,7 @@ class Survey:
             'rawSeeing': row['seeingFwhm500']*galsim.arcsec,
             'skyBrightness': row['skyBrightness'],
             'band': row['filter'],
+            'zenith': (90 - row['altitude']) * galsim.degrees,
             'exptime': 15.0,
             'temperature': 293.15,  # K
             'pressure': 69.328,  # kPa
@@ -328,6 +315,15 @@ class Atmosphere:
 
 
 class StarSimulator:
+    wavelength_dict = dict(
+        u=365.49,
+        g=480.03,
+        r=622.20,
+        i=754.06,
+        z=868.21,
+        y=991.66
+    )
+
     def __init__(
         self,
         observation,  # from OpSim
@@ -337,7 +333,7 @@ class StarSimulator:
         if rng is None:
             rng = galsim.BaseDeviate()
         self.observation = observation
-        self.wavelength = wavelength_dict[observation['band']]
+        self.wavelength = StarSimulator.wavelength_dict[observation['band']]
         self.rng = rng
 
         self.bandpass = galsim.Bandpass(
@@ -359,7 +355,7 @@ class StarSimulator:
 
     @lazy_property
     def atm(self):
-        return makeAtmosphere(
+        return Atmosphere.makeAtmosphere(
             self.observation['airmass'],
             self.observation['rawSeeing'],
             self.wavelength,
@@ -368,18 +364,12 @@ class StarSimulator:
 
     @lazy_property
     def second_kick(self):
-        # and pre-cache a 2nd kick
+        # pre-cache a 2nd kick
         psf = self.atm.makePSF(self.wavelength, diam=8.36)
         _ = psf.drawImage(nx=1, ny=1, n_photons=1, rng=rng, method='phot')
         return psf.second_kick
 
-    def simStar(self, coord, sed, nphoton, rng, mode='optic'):
-        """
-        The three modes:
-        - optic: start rays from entrance pupil.
-        - atm_high: include all effects except the first kick (low spatial order atmospheric contribution).
-        - full: atm_high with the first kick (low spatial order atmospheric contribution).
-        """
+    def simStar(self, coord, sed, nphoton, defocus, rng):
         fieldAngle = self.radecToField.toImage(coord)
         # Populate pupil
         r_outer = 8.36/2
@@ -404,50 +394,44 @@ class StarSimulator:
         ud.generate(t)
         t *= self.observation['exptime']
 
-        if mode == 'full':
-            # evaluate phase gradients at appropriate location/time
-            dku, dkv = self.atm.wavefront_gradient(
-                u, v, t, (fieldAngle.x*galsim.radians, fieldAngle.y*galsim.radians)
-            )  # output is in nm per m.  convert to radians
-            dku *= 1.e-9
-            dkv *= 1.e-9
-        else:
-            dku = np.zeros(nphoton)
-            dkv = np.zeros(nphoton)
+        # evaluate phase gradients at appropriate location/time
+        dku, dkv = self.atm.wavefront_gradient(
+            u, v, t, (fieldAngle.x*galsim.radians, fieldAngle.y*galsim.radians)
+        )  # output is in nm per m.  convert to radians
+        dku *= 1.e-9
+        dkv *= 1.e-9
 
-        if mode in {'full', 'atm_high'}:
-            # add in second kick
-            pa = galsim.PhotonArray(nphoton)
-            self.second_kick._shoot(pa, rng)
-            dku += pa.x*(galsim.arcsec/galsim.radians)
-            dkv += pa.y*(galsim.arcsec/galsim.radians)
+        # add in second kick
+        pa = galsim.PhotonArray(nphoton)
+        self.second_kick._shoot(pa, rng)
+        dku += pa.x*(galsim.arcsec/galsim.radians)
+        dkv += pa.y*(galsim.arcsec/galsim.radians)
 
         # assign wavelengths.
         wavelengths = sed.sampleWavelength(nphoton, self.bandpass, rng)
 
-        if mode in {'full', 'atm_high'}:
-            # Chromatic seeing.  Scale deflections by (lam/500)**(-0.3)
-            dku *= (wavelengths/500)**(-0.3)
-            dkv *= (wavelengths/500)**(-0.3)
+        # Chromatic seeing.  Scale deflections by (lam/500)**(-0.3)
+        dku *= (wavelengths/500)**(-0.3)
+        dkv *= (wavelengths/500)**(-0.3)
 
-            # DCR.  dkv is aligned along meridian, so only need to shift in this
-            # direction (I think)
-            base_refraction = galsim.dcr.get_refraction(
-                self.wavelength,
-                self.observation['zenith'],
-                temperature=self.observation['temperature'],
-                pressure=self.observation['pressure'],
-                H2O_pressure=self.observation['H2O_pressure'],
-            )
-            refraction = galsim.dcr.get_refraction(
-                wavelengths,
-                self.observation['zenith'],
-                temperature=self.observation['temperature'],
-                pressure=self.observation['pressure'],
-                H2O_pressure=self.observation['H2O_pressure'],
-            )
-            refraction -= base_refraction
-            dkv += refraction
+        # DCR.  dkv is aligned along meridian, so only need to shift in this
+        # direction (I think)
+        base_refraction = galsim.dcr.get_refraction(
+            self.wavelength,
+            self.observation['zenith'],
+            temperature=self.observation['temperature'],
+            pressure=self.observation['pressure'],
+            H2O_pressure=self.observation['H2O_pressure'],
+        )
+        refraction = galsim.dcr.get_refraction(
+            wavelengths,
+            self.observation['zenith'],
+            temperature=self.observation['temperature'],
+            pressure=self.observation['pressure'],
+            H2O_pressure=self.observation['H2O_pressure'],
+        )
+        refraction -= base_refraction
+        dkv += refraction
 
         # We're through the atmosphere!  Make a structure that batoid can use
         # now.  Note we're going to just do the sum in the tangent plane
@@ -474,6 +458,9 @@ class StarSimulator:
             x, y, z, vx, vy, vz, t=np.zeros_like(x), w=wavelengths*1e-9, flux=1
         )
 
+        # Set wavefront sensor focus.
+        self.telescope = self.telescope.withLocallyShiftedOptic('Detector', (0.0, 0.0, defocus))
+
         self.telescope.traceInPlace(rays)
 
         # Now we need to refract the beam into the Silicon.
@@ -493,6 +480,9 @@ class StarSimulator:
         pa.dydz = rays.vy/rays.vz
         pa.wavelength = wavelengths
         pa.flux = ~rays.vignetted
+
+        # Reset telescope focus to neutral.
+        self.telescope = self.telescope.withLocallyShiftedOptic('Detector', (0.0, 0.0, -defocus))
 
         # sensor = galsim.Sensor()
         sensor = galsim.SiliconSensor()
@@ -515,14 +505,14 @@ if __name__ == '__main__':
     sr = SimRecord('/labs/khatrilab/scottmk/david/wfsim/record')
     survey = Survey()
     observation = survey.get_observation(idx)
-    catalog = CatalogFactory.make_catalog(observation['boresight'], observation['parallactic'], mag_cutoff=20)
+    cf = CatalogFactory(FocalPlane())
+    catalog = cf.make_catalog(observation['boresight'], observation['parallactic'], mag_cutoff=20)
     rng = galsim.BaseDeviate(seed)
 
     # Could put in chip-to-chip information here.  Omit for the moment.
     # Put in defocus and rotation here.
     factory = LSSTFactory(observation['band'])
     visit_telescope = factory.make_visit_telescope(
-
         # Extreme aberrations
         M2_amplitude = 1.0,
         camera_amplitude = 1.0,
@@ -534,11 +524,8 @@ if __name__ == '__main__':
         # M1M3_bend_amplitude = 1./sqrt(30),
 
         rng = rng,
-        rotation = observation['rotTelPos'].rad,
-        defocus = 1.5e-3
     )
     telescope = visit_telescope.actual_telescope
-
 
     simulator = StarSimulator(
         observation,
@@ -546,29 +533,23 @@ if __name__ == '__main__':
         rng=rng,
     )
 
-    telescope.get_zernike()
-
     for i,row in enumerate(catalog):
-        if not row['teff_val']:
-            T = np.random.uniform(4000, 10000)
+        T = row['teff_val'] if row['teff_val'] else np.random.uniform(4000, 10000)
         coord = galsim.CelestialCoord(row['ra'] * galsim.degrees, row['dec'] * galsim.degrees)
         sed = Flux.BBSED(T)
 
         # Cutoff mags greater than 14.
         nphoton = Flux.nphotons(max(row['sdss_r_mag'], 14), T)
-        starImage, pix_x, pix_y = simulator.simStar(
-            coord, sed, nphoton, rng, return_photons=True
-        )
 
+        # SW0 -> intrafocal, SW1 -> extrafocal
+        defocus = 1.5e-3 if 'SW0' in row['chip'] else -1.5e-3
+        starImage, pos_x, pos_y = simulator.simStar(
+            coord, sed, nphoton, defocus, rng)
 
         # wavefront
         field = simulator.radecToField.toImage(coord)
-        zernikes = visit_telescope.get_zernike(fieldAngle.x*galsim.radians, fieldAngle.y*galsim.radians, jmax=11)
+        zernikes = batoid.analysis.zernikeGQ(telescope, field.x, field.y, factory.wavelength, eps=0.61, reference='chief', jmax=22)
         
         # write
-        filename = f'{i}'
-        fieldx = np.mean(starPhotons.x)
-        fieldy = np.mean(starPhotons.y)
-        sr.write(observation['observationId'], catalog['source_id'], runId, fieldAngle.x*galsim.radians, fieldAngle.y*galsim.radians, 
-                pos_x, pos_y, observation['parallactic'], observation['airmass'], seed, catalog['chip'], filename, starImage, zernikes)
-        
+        sr.write(observation['observationId'], row['source_id'], runId, field.x, field.y, 
+                pos_x, pos_y, observation['parallactic'].rad, observation['airmass'], observation['zenith'].rad, seed, row['chip'], starImage.array, zernikes)
