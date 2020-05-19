@@ -15,6 +15,7 @@ import galsim
 import batoid
 import pickle
 import os
+from time import time
 
 from wfTel import LSSTFactory
 
@@ -498,38 +499,38 @@ class StarSimulator:
 
 if __name__ == '__main__':
     STARS = 100
-    SWITCH_TELESCOPE = 10
+    SWITCH_TELESCOPE = 5
     SWITCH_ATMOSPHERE = 50
 
     parser = argparse.ArgumentParser()
-    parser.add_argument('-obs', type=int)
+    parser.add_argument('-obs', type=int, required=True)
     args = parser.parse_args()
 
     rng = galsim.BaseDeviate(args.obs)
-    observation = Survey().get_observation(args.obs)
+    survey = Survey()
+    observation = survey.get_observation(args.obs)
     np.random.seed(args.obs)
-    cf = CatalogFactory(FocalPlane()).make_catalog(observation['boresight'], observation['parallactic'], mag_cutoff=18, verbose=False)
-    cf.write('/scratch/users/dthomas5/twophase/catalogs/observation{}'.format(args.obs), overwrite=True)
+    start = time()
+    catalog_factory = CatalogFactory(FocalPlane())
+    catalog = catalog_factory.make_catalog(observation['boresight'], observation['parallactic'], mag_cutoff=18, verbose=False)
+    catalog.write('/scratch/users/dthomas5/twostage/catalogs/observation{}.csv'.format(args.obs), overwrite=True)
+    print('Making catalog: ', len(catalog), time()-start)
 
-    sr = SimRecord('/scratch/users/dthomas5/twophase/observation{}'.format(args.obs))
+    sr = SimRecord('/scratch/users/dthomas5/twostage/records/observation{}'.format(args.obs))
     simulator = StarSimulator(observation, rng=rng)
+    start = time()
     simulator.prepare_atmosphere()
-    
+    print('Preparing Atmosphere: ', time() -start)
     factory = LSSTFactory(observation['band'])
     
     ud = galsim.UniformDeviate(rng)
     # For each class of parameters, we randomly draw either 'mild' or 'extreme' amplitude
-    amplitude = [1/sqrt(50), 1.0]
-    telescope = factory.make_visit_telescope(
-        M2_amplitude = amplitude[randint(2)],
-        camera_amplitude = amplitude[randint(2)],
-        M1M3_zer_amplitude = amplitude[randint(2)],
-        M2_zer_amplitude = amplitude[randint(2)],
-        rng = rng,
-    ).actual_telescope
+    amp = 1/sqrt(50)
+    telescope = factory.make_visit_telescope(M2_amplitude=amp, camera_amplitude=amp,
+        M1M3_zer_amplitude=amp, M2_zer_amplitude=amp, rng=rng).actual_telescope
 
     ncat = len(catalog)
-    samples = np.random(ncat, STARS, replace=(ncat < STARS))
+    samples = np.random.choice(ncat, STARS, replace=(ncat < STARS))
     
     for i,row in enumerate(catalog[samples]):    
         T = row['teff_val'] if row['teff_val'] else np.random.uniform(4000, 10000)
@@ -541,8 +542,10 @@ if __name__ == '__main__':
 
         # SW0 -> intrafocal, SW1 -> extrafocal
         defocus = 1.5e-3 if 'SW0' in row['chip'] else -1.5e-3
+        start = time()
         starImage, pos_x, pos_y = simulator.simStar(
             telescope, coord, sed, nphoton, defocus, rng)
+        print('star ', nphoton, time() - start)
 
         # wavefront
         field = simulator.radecToField.toImage(coord)
@@ -551,17 +554,12 @@ if __name__ == '__main__':
         # write
         sr.write(observation['observationId'], row['source_id'], i, field.x, field.y, 
                 pos_x, pos_y, observation['parallactic'].rad, observation['airmass'], 
-                observation['zenith'].rad, seed, row['chip'], starImage.array.sum(), 
+                observation['zenith'].rad, args.obs, row['chip'], starImage.array.sum(), 
                 T, starImage.array, zernikes)
     
         if i % SWITCH_ATMOSPHERE == 0:
             simulator.prepare_atmosphere()
         if i % SWITCH_TELESCOPE == 0:
-            telescope = factory.make_visit_telescope(
-                M2_amplitude = amplitude[randint(2)],
-                camera_amplitude = amplitude[randint(2)],
-                M1M3_zer_amplitude = amplitude[randint(2)],
-                M2_zer_amplitude = amplitude[randint(2)],
-                rng = rng,
-            ).actual_telescope
+            telescope = factory.make_visit_telescope(M2_amplitude=amp, camera_amplitude=amp,
+               M1M3_zer_amplitude=amp, M2_zer_amplitude=amp, rng=rng).actual_telescope
             sr.flush()
