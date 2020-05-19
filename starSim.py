@@ -2,7 +2,7 @@ import argparse
 import multiprocessing
 import numpy as np
 from numpy.random import randint
-from math import sqrt
+from math import sqrt, ceil
 from scipy.optimize import bisect
 from astropy.table import Table
 from tqdm import tqdm
@@ -80,8 +80,8 @@ class SimRecord:
                            dtype=['i4', 'i8', 'i8', 'i4', 'f4', 'f4', 'f4', 'f4', 'f4', 'f4', 'f4', 'i4', 'str', 'i4', 'f4'])
 
     def write(self, observationId, sourceId, runId, fieldx, fieldy, posx, posy, parallactic, airmass, zenith, seed, chip, intensity, temperature, starImage, zernikes):
-        img_path = os.path.join(self.directory, '{}.image'.format(self.idx))
-        zer_path = os.path.join(self.directory, '{}.zernike'.format(self.idx))
+        img_path = os.path.join(self.directory, f'{self.idx}.image')
+        zer_path = os.path.join(self.directory, f'{self.idx}.zernike')
         np.save(open(img_path, 'wb'), starImage)
         np.save(open(zer_path, 'wb'), zernikes)
         self.table.add_row([self.idx, observationId, sourceId, runId, fieldx, fieldy, posx, posy, parallactic, airmass, zenith, seed, chip, intensity, temperature])
@@ -99,27 +99,23 @@ class SimRecord:
         stacked = vstack(tables)
         stacked.write(out_path, overwrite=True)
 
-class FocalPlane:
-    """
-    Keeps track of intra and extra-focal chips positions in focal plane.
-    """
-    def __init__(self):
-        chips = pickle.load(open('chips.pkl', 'rb'))
-        self.wavefront_sensors = {k: v for (k,v) in chips.items() if 'SW' in k}
 
-class CatalogFactory:
+class Catalog:
     """
     Queries Gaia catalog.
     """
-    def __init__(self, focal_plane):
-        self.focal_plane = focal_plane
-
-    def make_catalog(self, boresight, parallactic, mag_cutoff=18, verbose=True):
+    @staticmethod
+    def query(boresight, parallactic, mag_cutoff=18, verbose=True):
         """
         The sdss_r_mag relationship comes from 
         https://gea.esac.esa.int/archive/documentation/GDR2/Data_processing/chap_cu5pho/sec_cu5pho_calibr/ssec_cu5pho_PhotTransf.html
         viewed on 2020/4/7.
         """
+        # get wavefront sensor dimensions
+        chips = pickle.load(open('chips.pkl', 'rb'))
+        wavefront_sensors = {k: v for (k,v) in chips.items() if 'SW' in k}
+
+        # sky to field mapping
         cq, sq = np.cos(parallactic), np.sin(parallactic)
         affine = galsim.AffineTransform(cq, -sq, sq, cq)
         wcs = galsim.TanWCS(
@@ -128,8 +124,9 @@ class CatalogFactory:
                     units=galsim.radians
                 )
 
+        # stack catalog for each of 8 wavefront chips
         stack = []
-        for name, positions in self.focal_plane.wavefront_sensors.items():
+        for name, positions in focal_plane.wavefront_sensors.items():
             corners = np.array(positions['corners_field'])
             ra, dec = wcs.toWorld(corners[:,0], corners[:,1], units=galsim.degrees)
             result = CatalogFactory.__chip_table(ra, dec, mag_cutoff, verbose)
@@ -250,7 +247,7 @@ class Atmosphere:
         kcrit=0.2,
         screen_size=819.2,
         screen_scale=0.1,
-        nproc=1
+        nproc=6
     ):
         targetFWHM = (
             rawSeeing/galsim.arcsec *
@@ -370,6 +367,9 @@ class StarSimulator:
         self.second_kick = psf.second_kick
 
     def simStar(self, telescope, coord, sed, nphoton, defocus, rng):
+        if not hasattr(self, 'atm'):
+            self.prepare_atmosphere()
+
         fieldAngle = self.radecToField.toImage(coord)
         # Populate pupil
         r_outer = 8.36/2
@@ -498,54 +498,65 @@ class StarSimulator:
 
 
 if __name__ == '__main__':
-    STARS = 100
-    SWITCH_TELESCOPE = 5
-    SWITCH_ATMOSPHERE = 50
-
     parser = argparse.ArgumentParser()
-    parser.add_argument('-obs', type=int, required=True)
+    parser.add_argument('-obs', type=int, default=0)  # observation index, spans 0-5499
+    parser.add_argument('-stars', type=int, default=100) # number of stars to use
+    parser.add_argument('-atm', type=int, default=2) # number of atmosphere instances to use
+    parser.add_argument('-dir', type=str, default='/scratch/users/dthomas5/twostage') # data directory
     args = parser.parse_args()
 
+    # check arguments
+    if args.stars <= 0 or args.atm <= 0 or not os.path.exists(args.dir):
+        raise ValueError('Check arguments.')
+
+    # set seeds
     rng = galsim.BaseDeviate(args.obs)
+    np.random.seed(args.obs)
+    
+    # get observation
     survey = Survey()
     observation = survey.get_observation(args.obs)
-    np.random.seed(args.obs)
-    start = time()
-    catalog_factory = CatalogFactory(FocalPlane())
-    catalog = catalog_factory.make_catalog(observation['boresight'], observation['parallactic'], mag_cutoff=18, verbose=False)
-    catalog.write('/scratch/users/dthomas5/twostage/catalogs/observation{}.csv'.format(args.obs), overwrite=True)
-    print('Making catalog: ', len(catalog), time()-start)
-
-    sr = SimRecord('/scratch/users/dthomas5/twostage/records/observation{}'.format(args.obs))
-    simulator = StarSimulator(observation, rng=rng)
-    start = time()
-    simulator.prepare_atmosphere()
-    print('Preparing Atmosphere: ', time() -start)
-    factory = LSSTFactory(observation['band'])
     
-    ud = galsim.UniformDeviate(rng)
-    # For each class of parameters, we randomly draw either 'mild' or 'extreme' amplitude
-    amp = 1/sqrt(50)
-    telescope = factory.make_visit_telescope(M2_amplitude=amp, camera_amplitude=amp,
-        M1M3_zer_amplitude=amp, M2_zer_amplitude=amp, rng=rng).actual_telescope
-
+    # query corresponding catalog
+    start_catalog = time()
+    catalog = Catalog.query(observation['boresight'], observation['parallactic'], mag_cutoff=18, verbose=False)
+    catalog.write(os.path.join(args.dir, f'catalogs/observation{args.obs}.csv'), overwrite=True) # save for future
     ncat = len(catalog)
-    samples = np.random.choice(ncat, STARS, replace=(ncat < STARS))
+    samples = np.random.choice(ncat, args.stars, replace=(ncat < args.stars)) # draw STARS samples
+    finish_catalog = time()
+    print(f'Catalog length: {len(catalog)}, time: {finish_catalog-start_catalog}')
+
+    # create simulator, telescope factory, and sim records
+    simulator = StarSimulator(observation, rng=rng)
+    factory = LSSTFactory(observation['band'])
+    sr = SimRecord(os.path.join(args.dir, f'records/observation{args.obs}'))
     
-    for i,row in enumerate(catalog[samples]):    
-        T = row['teff_val'] if row['teff_val'] else np.random.uniform(4000, 10000)
+    for i,row in enumerate(catalog[samples]):
+        
+        # check if we should regenerate the atmosphere
+        if i % ceil(args.stars / args.atm) == 0:
+            start_atmosphere = time()
+            simulator.prepare_atmosphere()
+            finish_atmosphere = time()
+            print('Atmosphere time: {finish_atmosphere - start_atmosphere}')
+        
+        # generate telescope
+        amp = sqrt(5.0 / 50) # 5 * noise for 0.3 wave rms
+        telescope = factory.make_visit_telescope(M2_amplitude=amp, camera_amplitude=amp,
+            M1M3_zer_amplitude=amp, M2_zer_amplitude=amp, rng=rng).actual_telescope
+
+        # get coordinates, sed, nphotons
         coord = galsim.CelestialCoord(row['ra'] * galsim.degrees, row['dec'] * galsim.degrees)
+        T = row['teff_val'] if row['teff_val'] else np.random.uniform(4000, 10000)
         sed = Flux.BBSED(T)
-
-        # Cutoff mags greater than 14.
-        nphoton = Flux.nphotons(max(row['sdss_r_mag'], 14), T)
-
-        # SW0 -> intrafocal, SW1 -> extrafocal
-        defocus = 1.5e-3 if 'SW0' in row['chip'] else -1.5e-3
-        start = time()
+        nphoton = Flux.nphotons(max(row['sdss_r_mag'], 14), T) # cutoff mags greater than 14.
+        defocus = -1.5e-3 if 'SW0' in row['chip'] else 1.5e-3 # SW0 -> intrafocal, SW1 -> extrafocal
+        
+        start_star = time()
         starImage, pos_x, pos_y = simulator.simStar(
             telescope, coord, sed, nphoton, defocus, rng)
-        print('star ', nphoton, time() - start)
+        finish_star = time()
+        print(f'Star nphoton: {nphoton}, time: {finish_star - start_star}')
 
         # wavefront
         field = simulator.radecToField.toImage(coord)
@@ -557,9 +568,4 @@ if __name__ == '__main__':
                 observation['zenith'].rad, args.obs, row['chip'], starImage.array.sum(), 
                 T, starImage.array, zernikes)
     
-        if i % SWITCH_ATMOSPHERE == 0:
-            simulator.prepare_atmosphere()
-        if i % SWITCH_TELESCOPE == 0:
-            telescope = factory.make_visit_telescope(M2_amplitude=amp, camera_amplitude=amp,
-               M1M3_zer_amplitude=amp, M2_zer_amplitude=amp, rng=rng).actual_telescope
-            sr.flush()
+    sr.flush()
