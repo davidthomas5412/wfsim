@@ -1,5 +1,8 @@
+import argparse
 import multiprocessing
 import numpy as np
+from numpy.random import randint
+from math import sqrt
 from scipy.optimize import bisect
 from astropy.table import Table
 from tqdm import tqdm
@@ -72,23 +75,20 @@ class SimRecord:
         self.directory = directory
         os.makedirs(directory, exist_ok=True)
 
-        self.table = Table(names=['idx', 'observationId', 'sourceId', 'runId', 'fieldx', 'fieldy', 'posx', 'posy', 'parallactic', 'airmass', 'zenith', 'seed', 'chip'],
-                           dtype=['i4', 'i8', 'i8', 'i4', 'f4', 'f4', 'f4', 'f4', 'f4', 'f4', 'f4', 'i4', 'str'])
+        self.table = Table(names=['idx', 'observationId', 'sourceId', 'runId', 'fieldx', 'fieldy', 'posx', 'posy', 'parallactic', 'airmass', 'zenith', 'seed', 'chip', 'intensity', 'temperature'],
+                           dtype=['i4', 'i8', 'i8', 'i4', 'f4', 'f4', 'f4', 'f4', 'f4', 'f4', 'f4', 'i4', 'str', 'i4', 'f4'])
 
-    def write(self, observationId, sourceId, runId, fieldx, fieldy, posx, posy, parallactic, airmass, zenith, seed, chip, starImage, zernikes):
-        img_path = os.path.join(self.directory, f'{self.idx}.image')
-        zer_path = os.path.join(self.directory, f'{self.idx}.zernike')
+    def write(self, observationId, sourceId, runId, fieldx, fieldy, posx, posy, parallactic, airmass, zenith, seed, chip, intensity, temperature, starImage, zernikes):
+        img_path = os.path.join(self.directory, '{}.image'.format(self.idx))
+        zer_path = os.path.join(self.directory, '{}.zernike'.format(self.idx))
         np.save(open(img_path, 'wb'), starImage)
         np.save(open(zer_path, 'wb'), zernikes)
-        self.table.add_row([self.idx, observationId, sourceId, runId, fieldx, fieldy, posx, posy, parallactic, airmass, zenith, seed, chip])
+        self.table.add_row([self.idx, observationId, sourceId, runId, fieldx, fieldy, posx, posy, parallactic, airmass, zenith, seed, chip, intensity, temperature])
         self.idx += 1
 
-    def close(self):
+    def flush(self):
         table_path = os.path.join(self.directory, 'record.csv')
         self.table.write(table_path, overwrite=True)
-
-    def __del__(self):
-        self.close()
 
     @staticmethod
     def combine(in_glob, out_dir):
@@ -171,12 +171,16 @@ class Survey:
     The raw data is generated from the OpSim baseline_2snapsv1.4_10yrs.db database. The query sequence is:
         .mode csv
         .output survey.csv
-        SELECT observationId, fieldRA, fieldDec, airmass, altitude, filter, rotTelPos, rotSkyPos, skyBrightness, seeingFwhm500 FROM SummaryAllProps WHERE filter IS "r" ORDER BY random() LIMIT 10000;
-        SELECT observationId, fieldRA, fieldDec, airmass, altitude, filter, rotTelPos, rotSkyPos, skyBrightness, seeingFwhm500 FROM SummaryAllProps WHERE filter IS "r" AND observationId > 10000 LIMIT 100;
-        SELECT observationId, fieldRA, fieldDec, airmass, altitude, filter, rotTelPos, rotSkyPos, skyBrightness, seeingFwhm500 FROM SummaryAllProps WHERE filter IS "r" AND observationId > 20000 LIMIT 100;
-        SELECT observationId, fieldRA, fieldDec, airmass, altitude, filter, rotTelPos, rotSkyPos, skyBrightness, seeingFwhm500 FROM SummaryAllProps WHERE filter IS "r" AND observationId > 30000 LIMIT 100;
-        SELECT observationId, fieldRA, fieldDec, airmass, altitude, filter, rotTelPos, rotSkyPos, skyBrightness, seeingFwhm500 FROM SummaryAllProps WHERE filter IS "r" AND observationId > 40000 LIMIT 100;
-        SELECT observationId, fieldRA, fieldDec, airmass, altitude, filter, rotTelPos, rotSkyPos, skyBrightness, seeingFwhm500 FROM SummaryAllProps WHERE filter IS "r" AND observationId > 50000 LIMIT 100;
+        SELECT observationId, fieldRA, fieldDec, airmass, altitude, filter, rotTelPos, rotSkyPos, skyBrightness, seeingFwhm500 FROM SummaryAllProps WHERE filter IS "r" AND observationId > 100000 LIMIT 1000;
+        SELECT observationId, fieldRA, fieldDec, airmass, altitude, filter, rotTelPos, rotSkyPos, skyBrightness, seeingFwhm500 FROM SummaryAllProps WHERE filter IS "r" AND observationId > 200000 LIMIT 1000;
+        SELECT observationId, fieldRA, fieldDec, airmass, altitude, filter, rotTelPos, rotSkyPos, skyBrightness, seeingFwhm500 FROM SummaryAllProps WHERE filter IS "r" AND observationId > 300000 LIMIT 1000;
+        SELECT observationId, fieldRA, fieldDec, airmass, altitude, filter, rotTelPos, rotSkyPos, skyBrightness, seeingFwhm500 FROM SummaryAllProps WHERE filter IS "r" AND observationId > 400000 LIMIT 1000;
+        SELECT observationId, fieldRA, fieldDec, airmass, altitude, filter, rotTelPos, rotSkyPos, skyBrightness, seeingFwhm500 FROM SummaryAllProps WHERE filter IS "r" AND observationId > 500000 LIMIT 1000;
+        SELECT observationId, fieldRA, fieldDec, airmass, altitude, filter, rotTelPos, rotSkyPos, skyBrightness, seeingFwhm500 FROM SummaryAllProps WHERE filter IS "r" AND observationId > 610000 LIMIT 100;
+        SELECT observationId, fieldRA, fieldDec, airmass, altitude, filter, rotTelPos, rotSkyPos, skyBrightness, seeingFwhm500 FROM SummaryAllProps WHERE filter IS "r" AND observationId > 620000 LIMIT 100;
+        SELECT observationId, fieldRA, fieldDec, airmass, altitude, filter, rotTelPos, rotSkyPos, skyBrightness, seeingFwhm500 FROM SummaryAllProps WHERE filter IS "r" AND observationId > 630000 LIMIT 100;
+        SELECT observationId, fieldRA, fieldDec, airmass, altitude, filter, rotTelPos, rotSkyPos, skyBrightness, seeingFwhm500 FROM SummaryAllProps WHERE filter IS "r" AND observationId > 640000 LIMIT 100;
+        SELECT observationId, fieldRA, fieldDec, airmass, altitude, filter, rotTelPos, rotSkyPos, skyBrightness, seeingFwhm500 FROM SummaryAllProps WHERE filter IS "r" AND observationId > 650000 LIMIT 100;
         .output stdout
     """
     survey_file = 'survey.csv'
@@ -245,7 +249,7 @@ class Atmosphere:
         kcrit=0.2,
         screen_size=819.2,
         screen_scale=0.1,
-        nproc=6
+        nproc=1
     ):
         targetFWHM = (
             rawSeeing/galsim.arcsec *
@@ -327,8 +331,7 @@ class StarSimulator:
     def __init__(
         self,
         observation,  # from OpSim
-        telescope,  # batoid.Optic
-        rng=None,
+        rng=None
     ):
         if rng is None:
             rng = galsim.BaseDeviate()
@@ -339,8 +342,6 @@ class StarSimulator:
         self.bandpass = galsim.Bandpass(
             f"LSST_{observation['band']}.dat", wave_type='nm'
         )
-        
-        self.telescope = telescope
 
         # Develop gnomonic projection from ra/dec to field angle using
         # GalSim TanWCS class.
@@ -353,23 +354,21 @@ class StarSimulator:
             units=galsim.radians
         )
 
-    @lazy_property
-    def atm(self):
-        return Atmosphere.makeAtmosphere(
+    def prepare_atmosphere(self):
+        # generate atmosphere
+        self.atm = Atmosphere.makeAtmosphere(
             self.observation['airmass'],
             self.observation['rawSeeing'],
             self.wavelength,
             self.rng,
         )
 
-    @lazy_property
-    def second_kick(self):
         # pre-cache a 2nd kick
         psf = self.atm.makePSF(self.wavelength, diam=8.36)
         _ = psf.drawImage(nx=1, ny=1, n_photons=1, rng=rng, method='phot')
-        return psf.second_kick
+        self.second_kick = psf.second_kick
 
-    def simStar(self, coord, sed, nphoton, defocus, rng):
+    def simStar(self, telescope, coord, sed, nphoton, defocus, rng):
         fieldAngle = self.radecToField.toImage(coord)
         # Populate pupil
         r_outer = 8.36/2
@@ -446,11 +445,11 @@ class StarSimulator:
         # be obstructed by struts, e.g..
         x = u
         y = v
-        zPupil = self.telescope["M1"].surface.sag(0, 0.5*self.telescope.pupilSize)
+        zPupil = telescope["M1"].surface.sag(0, 0.5*telescope.pupilSize)
         z = np.zeros_like(x)+zPupil
         # Rescale velocities so that they're consistent with the current
         # refractive index.
-        n = self.telescope.inMedium.getN(wavelengths)
+        n = telescope.inMedium.getN(wavelengths*1e-9)
         vx /= n
         vy /= n
         vz /= n
@@ -459,16 +458,16 @@ class StarSimulator:
         )
 
         # Set wavefront sensor focus.
-        self.telescope = self.telescope.withLocallyShiftedOptic('Detector', (0.0, 0.0, defocus))
+        telescope = telescope.withLocallyShiftedOptic('Detector', (0.0, 0.0, defocus))
 
-        self.telescope.traceInPlace(rays)
+        telescope.traceInPlace(rays)
 
         # Now we need to refract the beam into the Silicon.
         silicon = batoid.TableMedium.fromTxt("silicon_dispersion.txt")
-        self.telescope['Detector'].surface.refractInPlace(
+        telescope['Detector'].surface.refractInPlace(
             rays,
-            self.telescope['Detector'].inMedium,
-            silicon, coordSys=self.telescope['Detector'].coordSys
+            telescope['Detector'].inMedium,
+            silicon, coordSys=telescope['Detector'].coordSys
         )
 
         # Need to convert to pixels for galsim sensor object
@@ -482,10 +481,10 @@ class StarSimulator:
         pa.flux = ~rays.vignetted
 
         # Reset telescope focus to neutral.
-        self.telescope = self.telescope.withLocallyShiftedOptic('Detector', (0.0, 0.0, -defocus))
+        telescope = telescope.withLocallyShiftedOptic('Detector', (0.0, 0.0, -defocus))
 
         # sensor = galsim.Sensor()
-        sensor = galsim.SiliconSensor()
+        sensor = galsim.SiliconSensor(nrecalc=1e6)
         image = galsim.Image(256, 256)  # hard code for now
         image.setCenter(int(np.mean(pa.x[~rays.vignetted])), 
             int(np.mean(pa.y[~rays.vignetted])))
@@ -498,42 +497,41 @@ class StarSimulator:
 
 
 if __name__ == '__main__':
-    idx = 0 # TODO: figure out how to distribute computation
-    runId = 0
-    seed = 7
+    STARS = 100
+    SWITCH_TELESCOPE = 10
+    SWITCH_ATMOSPHERE = 50
 
-    sr = SimRecord('/labs/khatrilab/scottmk/david/wfsim/record')
-    survey = Survey()
-    observation = survey.get_observation(idx)
-    cf = CatalogFactory(FocalPlane())
-    catalog = cf.make_catalog(observation['boresight'], observation['parallactic'], mag_cutoff=20)
-    rng = galsim.BaseDeviate(seed)
+    parser = argparse.ArgumentParser()
+    parser.add_argument('-obs', type=int)
+    args = parser.parse_args()
 
-    # Could put in chip-to-chip information here.  Omit for the moment.
-    # Put in defocus and rotation here.
+    rng = galsim.BaseDeviate(args.obs)
+    observation = Survey().get_observation(args.obs)
+    np.random.seed(args.obs)
+    cf = CatalogFactory(FocalPlane()).make_catalog(observation['boresight'], observation['parallactic'], mag_cutoff=18, verbose=False)
+    cf.write('/scratch/users/dthomas5/twophase/catalogs/observation{}'.format(args.obs), overwrite=True)
+
+    sr = SimRecord('/scratch/users/dthomas5/twophase/observation{}'.format(args.obs))
+    simulator = StarSimulator(observation, rng=rng)
+    simulator.prepare_atmosphere()
+    
     factory = LSSTFactory(observation['band'])
-    visit_telescope = factory.make_visit_telescope(
-        # Extreme aberrations
-        M2_amplitude = 1.0,
-        camera_amplitude = 1.0,
-        M1M3_zer_amplitude = 1.0,
-
-        # Moderate aberrations
-        # M2_amplitude = 1./sqrt(30),
-        # camera_amplitude = 1./sqrt(30),
-        # M1M3_bend_amplitude = 1./sqrt(30),
-
+    
+    ud = galsim.UniformDeviate(rng)
+    # For each class of parameters, we randomly draw either 'mild' or 'extreme' amplitude
+    amplitude = [1/sqrt(50), 1.0]
+    telescope = factory.make_visit_telescope(
+        M2_amplitude = amplitude[randint(2)],
+        camera_amplitude = amplitude[randint(2)],
+        M1M3_zer_amplitude = amplitude[randint(2)],
+        M2_zer_amplitude = amplitude[randint(2)],
         rng = rng,
-    )
-    telescope = visit_telescope.actual_telescope
+    ).actual_telescope
 
-    simulator = StarSimulator(
-        observation,
-        telescope,
-        rng=rng,
-    )
-
-    for i,row in enumerate(catalog):
+    ncat = len(catalog)
+    samples = np.random(ncat, STARS, replace=(ncat < STARS))
+    
+    for i,row in enumerate(catalog[samples]):    
         T = row['teff_val'] if row['teff_val'] else np.random.uniform(4000, 10000)
         coord = galsim.CelestialCoord(row['ra'] * galsim.degrees, row['dec'] * galsim.degrees)
         sed = Flux.BBSED(T)
@@ -544,12 +542,26 @@ if __name__ == '__main__':
         # SW0 -> intrafocal, SW1 -> extrafocal
         defocus = 1.5e-3 if 'SW0' in row['chip'] else -1.5e-3
         starImage, pos_x, pos_y = simulator.simStar(
-            coord, sed, nphoton, defocus, rng)
+            telescope, coord, sed, nphoton, defocus, rng)
 
         # wavefront
         field = simulator.radecToField.toImage(coord)
         zernikes = batoid.analysis.zernikeGQ(telescope, field.x, field.y, factory.wavelength, eps=0.61, reference='chief', jmax=22)
         
         # write
-        sr.write(observation['observationId'], row['source_id'], runId, field.x, field.y, 
-                pos_x, pos_y, observation['parallactic'].rad, observation['airmass'], observation['zenith'].rad, seed, row['chip'], starImage.array, zernikes)
+        sr.write(observation['observationId'], row['source_id'], i, field.x, field.y, 
+                pos_x, pos_y, observation['parallactic'].rad, observation['airmass'], 
+                observation['zenith'].rad, seed, row['chip'], starImage.array.sum(), 
+                T, starImage.array, zernikes)
+    
+        if i % SWITCH_ATMOSPHERE == 0:
+            simulator.prepare_atmosphere()
+        if i % SWITCH_TELESCOPE == 0:
+            telescope = factory.make_visit_telescope(
+                M2_amplitude = amplitude[randint(2)],
+                camera_amplitude = amplitude[randint(2)],
+                M1M3_zer_amplitude = amplitude[randint(2)],
+                M2_zer_amplitude = amplitude[randint(2)],
+                rng = rng,
+            ).actual_telescope
+            sr.flush()
