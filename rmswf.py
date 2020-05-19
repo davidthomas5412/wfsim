@@ -6,7 +6,7 @@ from tqdm import tqdm
 
 from wfTel import LSSTFactory
 
-factory = LSSTFactory('i')
+factory = LSSTFactory('r')
 
 amplitudes = [300e-6]*2   # M2 x/y
 amplitudes += [20e-6]     # M2 z
