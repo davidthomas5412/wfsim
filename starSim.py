@@ -126,14 +126,14 @@ class Catalog:
 
         # stack catalog for each of 8 wavefront chips
         stack = []
-        for name, positions in focal_plane.wavefront_sensors.items():
+        for name, positions in wavefront_sensors.items():
             corners = np.array(positions['corners_field'])
             ra, dec = wcs.toWorld(corners[:,0], corners[:,1], units=galsim.degrees)
-            result = CatalogFactory.__chip_table(ra, dec, mag_cutoff, verbose)
+            result = Catalog.__chip_table(ra, dec, mag_cutoff, verbose)
             mask = np.logical_or(
                 np.logical_or(result['phot_g_mean_mag'].mask, result['phot_bp_mean_mag'].mask), 
                 result['phot_rp_mean_mag'].mask)
-            result = result[[~mask]]
+            result = result[(~mask)]
             result['chip'] = name
             stack.append(result)
         stack = vstack(stack)
@@ -149,7 +149,7 @@ class Catalog:
     def __chip_table(ra, dec, mag_cutoff, verbose):
         query = f"""SELECT source_id, ra, dec, teff_val, phot_g_mean_mag, phot_bp_mean_mag, phot_rp_mean_mag FROM gaiadr2.gaia_source
         WHERE phot_g_mean_mag < {mag_cutoff}
-        AND 1=CONTAINS(POINT('ICRS',ra,dec), {CatalogFactory.__polygon_string(ra, dec)})
+        AND 1=CONTAINS(POINT('ICRS',ra,dec), {Catalog.__polygon_string(ra, dec)})
         """
         job = Gaia.launch_job(query=query, verbose=verbose)
         return job.get_results()
@@ -247,7 +247,7 @@ class Atmosphere:
         kcrit=0.2,
         screen_size=819.2,
         screen_scale=0.1,
-        nproc=6
+        nproc=1
     ):
         targetFWHM = (
             rawSeeing/galsim.arcsec *
@@ -394,12 +394,15 @@ class StarSimulator:
         ud.generate(t)
         t *= self.observation['exptime']
 
+        start_gradient = time()
         # evaluate phase gradients at appropriate location/time
         dku, dkv = self.atm.wavefront_gradient(
             u, v, t, (fieldAngle.x*galsim.radians, fieldAngle.y*galsim.radians)
         )  # output is in nm per m.  convert to radians
         dku *= 1.e-9
         dkv *= 1.e-9
+        finish_gradient = time()
+        print(f'Gradient: {finish_gradient - start_gradient}')
 
         # add in second kick
         pa = galsim.PhotonArray(nphoton)
@@ -441,6 +444,7 @@ class StarSimulator:
         dkv += fieldAngle.y
         vx, vy, vz = batoid.utils.fieldToDirCos(dku, dkv, projection='gnomonic')
 
+        start_ray = time()
         # Place rays on entrance pupil - the planar cap coincident with the rim
         # of M1.  Eventually may want to back rays up further so that they can
         # be obstructed by struts, e.g..
@@ -470,6 +474,8 @@ class StarSimulator:
             telescope['Detector'].inMedium,
             silicon, coordSys=telescope['Detector'].coordSys
         )
+        finish_ray = time()
+        print(f'Ray: {finish_ray - start_ray}')
 
         # Need to convert to pixels for galsim sensor object
         # Put batoid results back into photons
@@ -484,12 +490,15 @@ class StarSimulator:
         # Reset telescope focus to neutral.
         telescope = telescope.withLocallyShiftedOptic('Detector', (0.0, 0.0, -defocus))
 
+        start_sensor = time()
         # sensor = galsim.Sensor()
         sensor = galsim.SiliconSensor(nrecalc=1e6)
         image = galsim.Image(256, 256)  # hard code for now
         image.setCenter(int(np.mean(pa.x[~rays.vignetted])), 
             int(np.mean(pa.y[~rays.vignetted])))
         sensor.accumulate(pa, image)
+        finish_sensor = time()
+        print(f'Sensor: {finish_sensor - start_sensor}')
 
         pos_x = np.mean(rays.x[~rays.vignetted])
         pos_y = np.mean(rays.y[~rays.vignetted])
@@ -538,7 +547,7 @@ if __name__ == '__main__':
             start_atmosphere = time()
             simulator.prepare_atmosphere()
             finish_atmosphere = time()
-            print('Atmosphere time: {finish_atmosphere - start_atmosphere}')
+            print(f'Atmosphere time: {finish_atmosphere - start_atmosphere}')
         
         # generate telescope
         amp = sqrt(5.0 / 50) # 5 * noise for 0.3 wave rms
