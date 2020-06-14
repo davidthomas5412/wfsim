@@ -412,7 +412,7 @@ class VisitTelescope:
         no chip gaps)
         """
         return batoid.analysis.doubleZernike(
-            self.actual_telescope, np.deg2rad(1.75), self.factory.wavelength,
+            self.actual_telescope, np.deg2rad(1.90), self.factory.wavelength,
             rings=rings, reference='chief', jmax=jmax, kmax=kmax, eps=0.61
         )
 

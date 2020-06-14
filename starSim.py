@@ -18,7 +18,7 @@ import os
 from time import time
 
 from wfTel import LSSTFactory
-
+import glob
 
 class Flux:
     # precomputed in transmission.py
@@ -93,8 +93,12 @@ class SimRecord:
 
     @staticmethod
     def combine(in_glob, out_dir):
-        tables = [Table.read(f) for f in glob.glob(in_glob) if 'record.csv' in f]
-        os.mkdir(out_dir)
+        tables = []
+        for f in glob.glob(in_glob):
+            if 'record.csv' in f:
+                print(f'reading {f}')
+                tables.append(Table.read(f))
+        os.makedirs(out_dir, exist_ok=True)
         out_path = os.path.join(out_dir, 'record.csv')
         stacked = vstack(tables)
         stacked.write(out_path, overwrite=True)
@@ -363,7 +367,7 @@ class StarSimulator:
 
         # pre-cache a 2nd kick
         psf = self.atm.makePSF(self.wavelength, diam=8.36)
-        _ = psf.drawImage(nx=1, ny=1, n_photons=1, rng=rng, method='phot')
+        _ = psf.drawImage(nx=1, ny=1, n_photons=1, rng=self.rng, method='phot')
         self.second_kick = psf.second_kick
 
     def simStar(self, telescope, coord, sed, nphoton, defocus, rng):
