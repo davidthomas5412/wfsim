@@ -1,5 +1,3 @@
-import argparse
-import multiprocessing
 import numpy as np
 from numpy.random import randint
 from math import sqrt, ceil
@@ -10,12 +8,15 @@ from astropy.table import Table, vstack
 from astroquery.gaia import Gaia
 from bisect import bisect_left
 from galsim.utilities import lazy_property
+from time import time
 
+import argparse
+import multiprocessing
+import glob
 import galsim
 import batoid
 import pickle
 import os
-from time import time
 
 from wfTel import LSSTFactory
 
@@ -93,7 +94,11 @@ class SimRecord:
 
     @staticmethod
     def combine(in_glob, out_dir):
-        tables = [Table.read(f) for f in glob.glob(in_glob) if 'record.csv' in f]
+        tables = []
+        for f in glob.glob(in_glob):
+            if 'record.csv' in f:
+                print(f'reading {f}')
+                tables.append(Table.read(f))
         os.mkdir(out_dir)
         out_path = os.path.join(out_dir, 'record.csv')
         stacked = vstack(tables)
