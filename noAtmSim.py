@@ -216,7 +216,7 @@ if __name__ == '__main__':
     # create simulator, telescope factory, and sim records
     simulator = NoAtmSimulator(observation, rng=rng)
     factory = LSSTFactory(observation['band'])
-    sr = SimRecord(os.path.join(args.dir, f'records/observation{args.obs}_noatm'))
+    sr = SimRecord(os.path.join(args.dir, f'records/noatm/observation{args.obs}'))
     
     for i,row in enumerate(catalog[samples]):
         # generate telescope
@@ -248,3 +248,4 @@ if __name__ == '__main__':
                 T, starImage.array, zernikes)
     
     sr.flush()
+    print('Completed!')
