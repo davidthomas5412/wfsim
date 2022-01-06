@@ -32,6 +32,8 @@ if __name__ == '__main__':
     observation = survey.get_observation(args.obs)
     
     # query corresponding catalog
+    #catalog = Catalog.query(observation['boresight'], observation['parallactic'], mag_cutoff=18, verbose=False)
+    #catalog.write(os.path.join(args.dir, f'catalogs/observation{args.obs}.csv'), overwrite=True) # save for future
     cat_path = os.path.join(args.dir, f'catalogs/observation{args.obs}.csv')
     catalog = Table.read(cat_path) # assumes we already have fetched catalog
 

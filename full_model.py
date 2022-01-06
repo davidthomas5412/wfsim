@@ -79,13 +79,14 @@ class VisitData(Dataset):
         return loader
 
     def __init__(self, obs):
-        if obs < 5000 or obs >= 5099:
+        if obs < 5000 or obs >= 5499:
             raise ValueError('Check obs.')
         self.vis_dir = join(VisitData.DATA_DIR, f'observation{obs}')
         self.table = Table.read(join(self.vis_dir, 'record.csv'))
         self.state = np.load(join(self.vis_dir, 'state.dz'))
-        self.sky = np.loadtxt('/labs/khatrilab/scottmk/david/wfsim/sky.csv')
-        self.rng = galsim.BaseDeviate()  
+        sky = np.loadtxt('/labs/khatrilab/scottmk/david/wfsim/sky.csv')
+        self.m_sky = sky[obs % len(sky)]
+        self.rng = galsim.BaseDeviate(obs)  
 
     def __getitem__(self, idx):
         star = np.load(join(self.vis_dir, f'{idx}.image')).astype('float32')
@@ -113,8 +114,6 @@ class VisitData(Dataset):
 
         Mutates star.
         """
-        m_sky = self.sky[idx % len(self.sky)]
-
         # average of ITL + E2V sensors from O’Connor 2019
         gain = (0.69 + 0.94) / 2  
 
@@ -130,7 +129,7 @@ class VisitData(Dataset):
         # average of ITL + E2V sensors from O’Connor 2019
         read_noise = (4.7 + 6.1) / 2
             
-        sky_level = (t_exp / gain) * 10 ** ((m_zero - m_sky) / 2.5) * plate_scale ** 2
+        sky_level = (t_exp / gain) * 10 ** ((m_zero - self.m_sky) / 2.5) * plate_scale ** 2
         noise = galsim.CCDNoise(self.rng, sky_level=sky_level, gain=gain, read_noise=read_noise)
         img = galsim.Image(star)
         img.addNoise(noise)
@@ -138,3 +137,18 @@ class VisitData(Dataset):
 
     def __len__(self):
         return len(self.table)
+
+class ChipVisitData(VisitData):
+    DATA_DIR = '/labs/khatrilab/scottmk/david/twostage2/aggregate/visit'
+
+    @staticmethod
+    def loader(obs, chip, workers=48):
+        data = ChipVisitData(obs, chip)
+        loader = DataLoader(data, batch_size=16, shuffle=False, num_workers=workers)
+        return loader
+
+    def __init__(self, obs, chip):
+        super().__init__(obs)
+        self.table = Table.read(join(self.vis_dir, 'record.csv'))
+        mask = [chip in c for c in self.table['chip']]
+        self.table = self.table[mask]

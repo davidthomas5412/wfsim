@@ -21,9 +21,11 @@ import os
 from wfTel import LSSTFactory
 import glob
 
+BASE = '/labs/khatrilab/scottmk/david/wfsim'
+
 class Flux:
     # precomputed in transmission.py
-    __cache = np.load('transmission_cache.npy')
+    __cache = np.load(os.path.join(BASE, 'transmission_cache.npy'))
 
     @staticmethod
     def nphotons(sdss_mag_r, T, band='r', exptime=15):
@@ -186,11 +188,11 @@ class Survey:
         SELECT observationId, fieldRA, fieldDec, airmass, altitude, filter, rotTelPos, rotSkyPos, skyBrightness, seeingFwhm500 FROM SummaryAllProps WHERE filter IS "r" AND observationId > 650000 LIMIT 100;
         .output stdout
     """
-    survey_file = 'survey.csv'
+    survey_file = os.path.join(BASE, 'survey2.csv')
 
     def __init__(self):
         self.table = Table.read(Survey.survey_file, names=['observationId', 'fieldRA', 'fieldDec', 'airmass',\
-         'altitude', 'filter', 'rotTelPos', 'rotSkyPos', 'skyBrightness', 'seeingFwhm500'])
+         'altitude', 'filter', 'rotTelPos', 'rotSkyPos', 'skyBrightness', 'seeingFwhm500', 'skyBrightness2'])
 
     def get_observation(self, idx):
         row = self.table[idx]
@@ -311,12 +313,15 @@ class Atmosphere:
         r0 = r0_500 * (wavelength/500.0)**(6./5)
         kmax = kcrit/r0
 
-        with ctx.Pool(
-            nproc,
-            initializer=galsim.phase_screens.initWorker,
-            initargs=galsim.phase_screens.initWorkerArgs()
-        ) as pool:
-            atm.instantiate(pool=pool, kmax=kmax, check='phot')
+        if nproc <= 1:
+            atm.instantiate(kmax=kmax, check='phot')
+        else:
+            with ctx.Pool(
+                nproc,
+                initializer=galsim.phase_screens.initWorker,
+                initargs=galsim.phase_screens.initWorkerArgs()
+            ) as pool:
+                atm.instantiate(pool=pool, kmax=kmax, check='phot')
 
         return atm
 

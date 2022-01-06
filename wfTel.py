@@ -69,10 +69,6 @@ norm = {
     "M2 zer 20":        [-6.57e-08,   6.57e-08],
 }
 
-with open("mirrorModes.pkl", 'rb') as f:
-    bendingModeDict = pickle.load(f)
-
-
 def rot(thx, thy):
     return np.dot(batoid.RotX(thx), batoid.RotY(thy))
 

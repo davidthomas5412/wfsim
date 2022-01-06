@@ -1,0 +1,188 @@
+time: 1591830576.3328292, epoch: 0, batch: 0, train loss: 0.009640347212553024
+time: 1591830590.0900164, epoch: 0, batch: 0, mean dev loss: 0.1416620910167694, best: True
+time: 1591830667.3380332, epoch: 0, batch: 200, train loss: 0.005851112771779299
+time: 1591830680.7817605, epoch: 0, batch: 200, mean dev loss: 0.10680077970027924, best: True
+time: 1591830757.996574, epoch: 0, batch: 400, train loss: 0.008002175949513912
+time: 1591830767.329654, epoch: 0, batch: 400, mean dev loss: 0.10097629576921463, best: True
+time: 1591830844.4531124, epoch: 0, batch: 600, train loss: 0.006919665262103081
+time: 1591830856.9928205, epoch: 0, batch: 600, mean dev loss: 0.10332553088665009, best: False
+time: 1591830934.0379696, epoch: 0, batch: 800, train loss: 0.00907851755619049
+time: 1591830944.2225425, epoch: 0, batch: 800, mean dev loss: 0.10090185701847076, best: True
+time: 1591831021.2907343, epoch: 0, batch: 1000, train loss: 0.007510671392083168
+time: 1591831029.3930612, epoch: 0, batch: 1000, mean dev loss: 0.10575324296951294, best: False
+time: 1591831106.5403008, epoch: 0, batch: 1200, train loss: 0.007733809296041727
+time: 1591831116.39796, epoch: 0, batch: 1200, mean dev loss: 0.09377661347389221, best: True
+time: 1591831193.6050148, epoch: 0, batch: 1400, train loss: 0.0077696433290839195
+time: 1591831203.1345456, epoch: 0, batch: 1400, mean dev loss: 0.09791520237922668, best: False
+time: 1591831280.3607013, epoch: 0, batch: 1600, train loss: 0.008758622221648693
+time: 1591831291.266612, epoch: 0, batch: 1600, mean dev loss: 0.09847290068864822, best: False
+time: 1591831368.5044897, epoch: 0, batch: 1800, train loss: 0.006993615068495274
+time: 1591831375.4822714, epoch: 0, batch: 1800, mean dev loss: 0.0941418930888176, best: False
+time: 1591831452.5630915, epoch: 0, batch: 2000, train loss: 0.006621053442358971
+time: 1591831463.8451855, epoch: 0, batch: 2000, mean dev loss: 0.09665913134813309, best: False
+time: 1591831540.9441845, epoch: 0, batch: 2200, train loss: 0.007396130822598934
+time: 1591831549.2221863, epoch: 0, batch: 2200, mean dev loss: 0.09198012948036194, best: True
+time: 1591831626.386333, epoch: 0, batch: 2400, train loss: 0.008817877620458603
+time: 1591831634.1544757, epoch: 0, batch: 2400, mean dev loss: 0.09151162207126617, best: True
+time: 1591831711.2700539, epoch: 0, batch: 2600, train loss: 0.006603145971894264
+time: 1591831720.588385, epoch: 0, batch: 2600, mean dev loss: 0.09919372946023941, best: False
+time: 1591831797.5543845, epoch: 0, batch: 2800, train loss: 0.007145976182073355
+time: 1591831806.121227, epoch: 0, batch: 2800, mean dev loss: 0.09480194747447968, best: False
+time: 1591831883.116869, epoch: 0, batch: 3000, train loss: 0.008504020050168037
+time: 1591831893.275883, epoch: 0, batch: 3000, mean dev loss: 0.0911841168999672, best: True
+time: 1591831970.2302003, epoch: 0, batch: 3200, train loss: 0.0066151367500424385
+time: 1591831977.8991034, epoch: 0, batch: 3200, mean dev loss: 0.08928456157445908, best: True
+time: 1591832054.865985, epoch: 0, batch: 3400, train loss: 0.006899843458086252
+time: 1591832066.3292909, epoch: 0, batch: 3400, mean dev loss: 0.09127318859100342, best: False
+time: 1591832143.3046358, epoch: 0, batch: 3600, train loss: 0.006864604074507952
+time: 1591832150.8176167, epoch: 0, batch: 3600, mean dev loss: 0.09562882035970688, best: False
+time: 1591832227.8697913, epoch: 0, batch: 3800, train loss: 0.007311642169952393
+time: 1591832235.3006313, epoch: 0, batch: 3800, mean dev loss: 0.0895027220249176, best: False
+time: 1591832312.324731, epoch: 0, batch: 4000, train loss: 0.007204010151326656
+time: 1591832320.662686, epoch: 0, batch: 4000, mean dev loss: 0.10468797385692596, best: False
+time: 1591832397.6306207, epoch: 0, batch: 4200, train loss: 0.007081121206283569
+time: 1591832406.3941927, epoch: 0, batch: 4200, mean dev loss: 0.08912205696105957, best: True
+time: 1591832483.4554148, epoch: 0, batch: 4400, train loss: 0.007206774316728115
+time: 1591832494.4525568, epoch: 0, batch: 4400, mean dev loss: 0.09296727180480957, best: False
+time: 1591832571.6552467, epoch: 0, batch: 4600, train loss: 0.007569905836135149
+time: 1591832580.0474532, epoch: 0, batch: 4600, mean dev loss: 0.09482789039611816, best: False
+time: 1591832657.0404303, epoch: 0, batch: 4800, train loss: 0.007754544261842966
+time: 1591832667.9664578, epoch: 0, batch: 4800, mean dev loss: 0.08927293121814728, best: False
+time: 1591832744.959623, epoch: 0, batch: 5000, train loss: 0.00670037604868412
+time: 1591832752.360929, epoch: 0, batch: 5000, mean dev loss: 0.08761409670114517, best: True
+time: 1591832829.442127, epoch: 0, batch: 5200, train loss: 0.006660209037363529
+time: 1591832836.789624, epoch: 0, batch: 5200, mean dev loss: 0.08963802456855774, best: False
+time: 1591832913.7851276, epoch: 0, batch: 5400, train loss: 0.007855190895497799
+time: 1591832922.2532463, epoch: 0, batch: 5400, mean dev loss: 0.0882691890001297, best: False
+time: 1591832999.3334177, epoch: 0, batch: 5600, train loss: 0.006787529215216637
+time: 1591833008.0264943, epoch: 0, batch: 5600, mean dev loss: 0.08783230930566788, best: False
+time: 1591833085.0747564, epoch: 0, batch: 5800, train loss: 0.007495719473809004
+time: 1591833095.887136, epoch: 0, batch: 5800, mean dev loss: 0.08854441344738007, best: False
+time: 1591833173.0843034, epoch: 0, batch: 6000, train loss: 0.007675291039049625
+time: 1591833182.0151117, epoch: 0, batch: 6000, mean dev loss: 0.10289662331342697, best: False
+time: 1591833259.0757265, epoch: 0, batch: 6200, train loss: 0.007722880225628614
+time: 1591833270.7001264, epoch: 0, batch: 6200, mean dev loss: 0.09237407892942429, best: False
+time: 1591833347.8300924, epoch: 0, batch: 6400, train loss: 0.006836099550127983
+time: 1591833355.442599, epoch: 0, batch: 6400, mean dev loss: 0.09089241176843643, best: False
+time: 1591833432.4704444, epoch: 0, batch: 6600, train loss: 0.007926484569907188
+time: 1591833440.3603358, epoch: 0, batch: 6600, mean dev loss: 0.08772037923336029, best: False
+time: 1591833517.37147, epoch: 0, batch: 6800, train loss: 0.006598448380827904
+time: 1591833527.837875, epoch: 0, batch: 6800, mean dev loss: 0.09233859926462173, best: False
+time: 1591833604.9514132, epoch: 0, batch: 7000, train loss: 0.006741757038980722
+time: 1591833612.1517708, epoch: 0, batch: 7000, mean dev loss: 0.08896921575069427, best: False
+time: 1591833689.2814379, epoch: 0, batch: 7200, train loss: 0.007077253423631191
+time: 1591833699.2406735, epoch: 0, batch: 7200, mean dev loss: 0.08880938589572906, best: False
+time: 1591833776.231588, epoch: 0, batch: 7400, train loss: 0.008494924753904343
+time: 1591833786.585668, epoch: 0, batch: 7400, mean dev loss: 0.08795271068811417, best: False
+time: 1591833863.494603, epoch: 0, batch: 7600, train loss: 0.007271165493875742
+time: 1591833876.6107454, epoch: 0, batch: 7600, mean dev loss: 0.09148876368999481, best: False
+time: 1591833953.621815, epoch: 0, batch: 7800, train loss: 0.007977043278515339
+time: 1591833960.7346792, epoch: 0, batch: 7800, mean dev loss: 0.10500937700271606, best: False
+time: 1591834037.672845, epoch: 0, batch: 8000, train loss: 0.007049491163343191
+time: 1591834045.0145905, epoch: 0, batch: 8000, mean dev loss: 0.09137566387653351, best: False
+time: 1591834121.9690268, epoch: 0, batch: 8200, train loss: 0.007592188660055399
+time: 1591834133.0612094, epoch: 0, batch: 8200, mean dev loss: 0.08850536495447159, best: False
+time: 1591834210.022542, epoch: 0, batch: 8400, train loss: 0.008239484392106533
+time: 1591834218.1269147, epoch: 0, batch: 8400, mean dev loss: 0.0877232775092125, best: False
+time: 1591834295.0800674, epoch: 0, batch: 8600, train loss: 0.006348542869091034
+time: 1591834304.1931012, epoch: 0, batch: 8600, mean dev loss: 0.08729501068592072, best: True
+time: 1591834381.1071155, epoch: 0, batch: 8800, train loss: 0.0070714280009269714
+time: 1591834390.5119817, epoch: 0, batch: 8800, mean dev loss: 0.08708880841732025, best: True
+time: 1591834467.5385835, epoch: 0, batch: 9000, train loss: 0.00804636999964714
+time: 1591834480.138628, epoch: 0, batch: 9000, mean dev loss: 0.09132413566112518, best: False
+time: 1591834557.1086297, epoch: 0, batch: 9200, train loss: 0.008463339880108833
+time: 1591834564.041123, epoch: 0, batch: 9200, mean dev loss: 0.08701101690530777, best: True
+time: 1591834629.5600977, epoch: 1, batch: 0, train loss: 0.007434995844960213
+time: 1591834633.6734939, epoch: 1, batch: 0, mean dev loss: 0.08694454282522202, best: True
+time: 1591834710.689579, epoch: 1, batch: 200, train loss: 0.007196607533842325
+time: 1591834714.2505913, epoch: 1, batch: 200, mean dev loss: 0.09131384640932083, best: False
+time: 1591834791.1650689, epoch: 1, batch: 400, train loss: 0.008515287190675735
+time: 1591834794.7798662, epoch: 1, batch: 400, mean dev loss: 0.08916456997394562, best: False
+time: 1591834871.76412, epoch: 1, batch: 600, train loss: 0.008405585773289204
+time: 1591834875.3717985, epoch: 1, batch: 600, mean dev loss: 0.08827308565378189, best: False
+time: 1591834952.3082488, epoch: 1, batch: 800, train loss: 0.005822109058499336
+time: 1591834955.96657, epoch: 1, batch: 800, mean dev loss: 0.0843711793422699, best: True
+time: 1591835032.9131577, epoch: 1, batch: 1000, train loss: 0.007244906388223171
+time: 1591835036.421678, epoch: 1, batch: 1000, mean dev loss: 0.08501628041267395, best: False
+time: 1591835113.303147, epoch: 1, batch: 1200, train loss: 0.0077174995094537735
+time: 1591835116.9087162, epoch: 1, batch: 1200, mean dev loss: 0.08792644739151001, best: False
+time: 1591835193.7132592, epoch: 1, batch: 1400, train loss: 0.006920990999788046
+time: 1591835197.3831396, epoch: 1, batch: 1400, mean dev loss: 0.08732180297374725, best: False
+time: 1591835274.2751591, epoch: 1, batch: 1600, train loss: 0.00744543457403779
+time: 1591835277.9940462, epoch: 1, batch: 1600, mean dev loss: 0.08317425101995468, best: True
+time: 1591835354.9116542, epoch: 1, batch: 1800, train loss: 0.007095277309417725
+time: 1591835358.4681072, epoch: 1, batch: 1800, mean dev loss: 0.08762567490339279, best: False
+time: 1591835435.3554869, epoch: 1, batch: 2000, train loss: 0.007055430673062801
+time: 1591835438.9849002, epoch: 1, batch: 2000, mean dev loss: 0.08322975039482117, best: False
+time: 1591835515.876218, epoch: 1, batch: 2200, train loss: 0.0062885163351893425
+time: 1591835519.3232818, epoch: 1, batch: 2200, mean dev loss: 0.08424103260040283, best: False
+time: 1591835596.147824, epoch: 1, batch: 2400, train loss: 0.005962202325463295
+time: 1591835599.6754854, epoch: 1, batch: 2400, mean dev loss: 0.0874096006155014, best: False
+time: 1591835676.5499852, epoch: 1, batch: 2600, train loss: 0.0063734413124620914
+time: 1591835680.2370837, epoch: 1, batch: 2600, mean dev loss: 0.08414358645677567, best: False
+time: 1591835757.1212473, epoch: 1, batch: 2800, train loss: 0.007898499257862568
+time: 1591835760.8270748, epoch: 1, batch: 2800, mean dev loss: 0.08183068037033081, best: True
+time: 1591835837.721477, epoch: 1, batch: 3000, train loss: 0.007309154607355595
+time: 1591835841.2995136, epoch: 1, batch: 3000, mean dev loss: 0.08259513974189758, best: False
+time: 1591835918.214459, epoch: 1, batch: 3200, train loss: 0.0067315008491277695
+time: 1591835921.7028453, epoch: 1, batch: 3200, mean dev loss: 0.08381988108158112, best: False
+time: 1591835998.5973725, epoch: 1, batch: 3400, train loss: 0.007318804506212473
+time: 1591836002.1392798, epoch: 1, batch: 3400, mean dev loss: 0.08924371749162674, best: False
+time: 1591836079.0557384, epoch: 1, batch: 3600, train loss: 0.006678568199276924
+time: 1591836082.5870523, epoch: 1, batch: 3600, mean dev loss: 0.08507796376943588, best: False
+time: 1591836159.4892905, epoch: 1, batch: 3800, train loss: 0.005760412663221359
+time: 1591836163.1079717, epoch: 1, batch: 3800, mean dev loss: 0.08096697181463242, best: True
+time: 1591836240.0188065, epoch: 1, batch: 4000, train loss: 0.006712287664413452
+time: 1591836243.818739, epoch: 1, batch: 4000, mean dev loss: 0.08051419258117676, best: True
+time: 1591836320.7162983, epoch: 1, batch: 4200, train loss: 0.008220306597650051
+time: 1591836324.3054018, epoch: 1, batch: 4200, mean dev loss: 0.08423445373773575, best: False
+time: 1591836401.1940908, epoch: 1, batch: 4400, train loss: 0.008044329471886158
+time: 1591836404.7148073, epoch: 1, batch: 4400, mean dev loss: 0.09003183245658875, best: False
+time: 1591836481.622061, epoch: 1, batch: 4600, train loss: 0.0066137006506323814
+time: 1591836485.2474372, epoch: 1, batch: 4600, mean dev loss: 0.09035787731409073, best: False
+time: 1591836562.1396852, epoch: 1, batch: 4800, train loss: 0.006987181957811117
+time: 1591836565.7304032, epoch: 1, batch: 4800, mean dev loss: 0.08419512212276459, best: False
+time: 1591836642.6370268, epoch: 1, batch: 5000, train loss: 0.007057802751660347
+time: 1591836646.2241497, epoch: 1, batch: 5000, mean dev loss: 0.0818573534488678, best: False
+time: 1591836723.1454365, epoch: 1, batch: 5200, train loss: 0.007353660184890032
+time: 1591836726.7136705, epoch: 1, batch: 5200, mean dev loss: 0.0827452763915062, best: False
+time: 1591836803.6675105, epoch: 1, batch: 5400, train loss: 0.006412457674741745
+time: 1591836807.1830914, epoch: 1, batch: 5400, mean dev loss: 0.08327917754650116, best: False
+time: 1591836884.1209183, epoch: 1, batch: 5600, train loss: 0.00628197705373168
+time: 1591836887.707811, epoch: 1, batch: 5600, mean dev loss: 0.0841352716088295, best: False
+time: 1591836964.6025112, epoch: 1, batch: 5800, train loss: 0.006269573234021664
+time: 1591836968.1757634, epoch: 1, batch: 5800, mean dev loss: 0.08258559554815292, best: False
+time: 1591837045.0924363, epoch: 1, batch: 6000, train loss: 0.0062765334732830524
+time: 1591837048.5889268, epoch: 1, batch: 6000, mean dev loss: 0.08745487779378891, best: False
+time: 1591837125.4981556, epoch: 1, batch: 6200, train loss: 0.007166122552007437
+time: 1591837129.137602, epoch: 1, batch: 6200, mean dev loss: 0.09028688818216324, best: False
+time: 1591837206.0426595, epoch: 1, batch: 6400, train loss: 0.0066648218780756
+time: 1591837209.6143427, epoch: 1, batch: 6400, mean dev loss: 0.08098423480987549, best: False
+time: 1591837286.4631188, epoch: 1, batch: 6600, train loss: 0.006789295002818108
+time: 1591837290.1191351, epoch: 1, batch: 6600, mean dev loss: 0.07867366820573807, best: True
+time: 1591837367.0112658, epoch: 1, batch: 6800, train loss: 0.00748625211417675
+time: 1591837370.598158, epoch: 1, batch: 6800, mean dev loss: 0.08212797343730927, best: False
+time: 1591837447.525828, epoch: 1, batch: 7000, train loss: 0.0068772342056035995
+time: 1591837451.1922271, epoch: 1, batch: 7000, mean dev loss: 0.08122023940086365, best: False
+time: 1591837528.0967762, epoch: 1, batch: 7200, train loss: 0.007365899160504341
+time: 1591837531.670894, epoch: 1, batch: 7200, mean dev loss: 0.08182463049888611, best: False
+time: 1591837608.4810348, epoch: 1, batch: 7400, train loss: 0.007000423967838287
+time: 1591837611.9561799, epoch: 1, batch: 7400, mean dev loss: 0.0859917551279068, best: False
+time: 1591837688.869876, epoch: 1, batch: 7600, train loss: 0.009805317968130112
+time: 1591837692.3719432, epoch: 1, batch: 7600, mean dev loss: 0.08056230843067169, best: False
+time: 1591837769.2467139, epoch: 1, batch: 7800, train loss: 0.006595843471586704
+time: 1591837772.762599, epoch: 1, batch: 7800, mean dev loss: 0.08409879356622696, best: False
+time: 1591837849.576614, epoch: 1, batch: 8000, train loss: 0.0066517675295472145
+time: 1591837853.127551, epoch: 1, batch: 8000, mean dev loss: 0.08010600507259369, best: False
+time: 1591837930.04862, epoch: 1, batch: 8200, train loss: 0.007043198682367802
+time: 1591837933.5192683, epoch: 1, batch: 8200, mean dev loss: 0.0846388041973114, best: False
+time: 1591838010.4821658, epoch: 1, batch: 8400, train loss: 0.0058469511568546295
+time: 1591838015.6374686, epoch: 1, batch: 8400, mean dev loss: 0.09053032845258713, best: False
+time: 1591838092.5538595, epoch: 1, batch: 8600, train loss: 0.00630432041361928
+time: 1591838096.0717688, epoch: 1, batch: 8600, mean dev loss: 0.08239036798477173, best: False
+time: 1591838172.989325, epoch: 1, batch: 8800, train loss: 0.007358459290117025
+time: 1591838176.5132957, epoch: 1, batch: 8800, mean dev loss: 0.08799751102924347, best: False
+time: 1591838253.401052, epoch: 1, batch: 9000, train loss: 0.005691567901521921
+time: 1591838256.9121945, epoch: 1, batch: 9000, mean dev loss: 0.08194664120674133, best: False
+time: 1591838333.8744082, epoch: 1, batch: 9200, train loss: 0.006697863340377808
+time: 1591838337.4511852, epoch: 1, batch: 9200, mean dev loss: 0.08147833496332169, best: False

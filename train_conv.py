@@ -159,6 +159,7 @@ class Data(Dataset):
         read_noise = (4.7 + 6.1) / 2
             
         sky_level = (t_exp / gain) * 10 ** ((m_zero - m_sky) / 2.5) * plate_scale ** 2
+        self.rng._seed(idx)
         noise = galsim.CCDNoise(self.rng, sky_level=sky_level, gain=gain, read_noise=read_noise)
         img = galsim.Image(star)
         img.addNoise(noise)

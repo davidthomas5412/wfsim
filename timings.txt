@@ -1,0 +1,186 @@
+Created TAP+ (v1.2.1) - Connection:
+	Host: gea.esac.esa.int
+	Use HTTPS: True
+	Port: 443
+	SSL Port: 443
+Created TAP+ (v1.2.1) - Connection:
+	Host: geadata.esac.esa.int
+	Use HTTPS: True
+	Port: 443
+	SSL Port: 443
+Before catalog:  1589818166.0911734
+Launched query: 'SELECT  TOP 2000 source_id, ra, dec, teff_val, phot_g_mean_mag, phot_bp_mean_mag, phot_rp_mean_mag FROM gaiadr2.gaia_source
+        WHERE phot_g_mean_mag < 20
+        AND 1=CONTAINS(POINT('ICRS',ra,dec), POLYGON('ICRS', 294.2067487583704, -19.833563554232157,294.4275317545305,-19.923012416560827,294.3807964260147,-20.025004887812656,294.1598928681677,-19.935486462827363))
+        '
+------>https
+host = gea.esac.esa.int:443
+context = /tap-server/tap/sync
+Content-type = application/x-www-form-urlencoded
+200 200
+[('Date', 'Mon, 18 May 2020 16:09:26 GMT'), ('Server', 'Apache/2.4.6 (Red Hat Enterprise Linux) OpenSSL/1.0.2k-fips PHP/5.4.16 mod_jk/1.2.43'), ('Cache-Control', 'no-cache, no-store, max-age=0, must-revalidate'), ('Pragma', 'no-cache'), ('Expires', '0'), ('X-XSS-Protection', '1; mode=block'), ('X-Frame-Options', 'SAMEORIGIN'), ('X-Content-Type-Options', 'nosniff'), ('Set-Cookie', 'JSESSIONID=1274F543E59BA0D8CFB68FFEA5298D92; Path=/tap-server; Secure; HttpOnly'), ('Content-Encoding', 'gzip'), ('Content-Disposition', 'attachment;filename="1589818166792O-result.vot"'), ('Transfer-Encoding', 'chunked'), ('Content-Type', 'application/x-votable+xml')]
+Retrieving sync. results...
+Query finished.
+Launched query: 'SELECT  TOP 2000 source_id, ra, dec, teff_val, phot_g_mean_mag, phot_bp_mean_mag, phot_rp_mean_mag FROM gaiadr2.gaia_source
+        WHERE phot_g_mean_mag < 20
+        AND 1=CONTAINS(POINT('ICRS',ra,dec), POLYGON('ICRS', 294.43518200557963, -19.906584095367812,294.21441835611256,-19.817146591462983,294.2612000573596,-19.71521900053929,294.4818429463101,-19.804586970480642))
+        '
+------>https
+host = gea.esac.esa.int:443
+context = /tap-server/tap/sync
+Content-type = application/x-www-form-urlencoded
+200 200
+[('Date', 'Mon, 18 May 2020 16:09:27 GMT'), ('Server', 'Apache/2.4.6 (Red Hat Enterprise Linux) OpenSSL/1.0.2k-fips PHP/5.4.16 mod_jk/1.2.43'), ('Cache-Control', 'no-cache, no-store, max-age=0, must-revalidate'), ('Pragma', 'no-cache'), ('Expires', '0'), ('X-XSS-Protection', '1; mode=block'), ('X-Frame-Options', 'SAMEORIGIN'), ('X-Content-Type-Options', 'nosniff'), ('Set-Cookie', 'JSESSIONID=02E7B6A0B7DD3A00BA5053FA7CD34142; Path=/tap-server; Secure; HttpOnly'), ('Content-Encoding', 'gzip'), ('Content-Disposition', 'attachment;filename="1589818167945O-result.vot"'), ('Transfer-Encoding', 'chunked'), ('Content-Type', 'application/x-votable+xml')]
+Retrieving sync. results...
+Query finished.
+Launched query: 'SELECT  TOP 2000 source_id, ra, dec, teff_val, phot_g_mean_mag, phot_bp_mean_mag, phot_rp_mean_mag FROM gaiadr2.gaia_source
+        WHERE phot_g_mean_mag < 20
+        AND 1=CONTAINS(POINT('ICRS',ra,dec), POLYGON('ICRS', 296.69610360971905, -20.688277889198716,296.60367099751403,-20.89718789432911,296.49389109461265,-20.854637900947345,296.586461888672,-20.64578216109104))
+        '
+------>https
+host = gea.esac.esa.int:443
+context = /tap-server/tap/sync
+Content-type = application/x-www-form-urlencoded
+200 200
+[('Date', 'Mon, 18 May 2020 16:09:29 GMT'), ('Server', 'Apache/2.4.6 (Red Hat Enterprise Linux) OpenSSL/1.0.2k-fips PHP/5.4.16 mod_jk/1.2.43'), ('Cache-Control', 'no-cache, no-store, max-age=0, must-revalidate'), ('Pragma', 'no-cache'), ('Expires', '0'), ('X-XSS-Protection', '1; mode=block'), ('X-Frame-Options', 'SAMEORIGIN'), ('X-Content-Type-Options', 'nosniff'), ('Set-Cookie', 'JSESSIONID=2A4D0172C7B314A53F9CD939070AF849; Path=/tap-server; Secure; HttpOnly'), ('Content-Encoding', 'gzip'), ('Content-Disposition', 'attachment;filename="1589818169040O-result.vot"'), ('Transfer-Encoding', 'chunked'), ('Content-Type', 'application/x-votable+xml')]
+Retrieving sync. results...
+Query finished.
+Launched query: 'SELECT  TOP 2000 source_id, ra, dec, teff_val, phot_g_mean_mag, phot_bp_mean_mag, phot_rp_mean_mag FROM gaiadr2.gaia_source
+        WHERE phot_g_mean_mag < 20
+        AND 1=CONTAINS(POINT('ICRS',ra,dec), POLYGON('ICRS', 296.62136002959494, -20.904155443818894,296.7137703813735,-20.6952367530242,296.82347321634273,-20.737647940182676,296.73120200190397,-20.946620020067993))
+        '
+------>https
+host = gea.esac.esa.int:443
+context = /tap-server/tap/sync
+Content-type = application/x-www-form-urlencoded
+200 200
+[('Date', 'Mon, 18 May 2020 16:09:30 GMT'), ('Server', 'Apache/2.4.6 (Red Hat Enterprise Linux) OpenSSL/1.0.2k-fips PHP/5.4.16 mod_jk/1.2.43'), ('Cache-Control', 'no-cache, no-store, max-age=0, must-revalidate'), ('Pragma', 'no-cache'), ('Expires', '0'), ('X-XSS-Protection', '1; mode=block'), ('X-Frame-Options', 'SAMEORIGIN'), ('X-Content-Type-Options', 'nosniff'), ('Set-Cookie', 'JSESSIONID=169D457421F756747FCE3DE04E525F0B; Path=/tap-server; Secure; HttpOnly'), ('Content-Encoding', 'gzip'), ('Content-Disposition', 'attachment;filename="1589818170228O-result.vot"'), ('Transfer-Encoding', 'chunked'), ('Content-Type', 'application/x-votable+xml')]
+Retrieving sync. results...
+Query finished.
+Launched query: 'SELECT  TOP 2000 source_id, ra, dec, teff_val, phot_g_mean_mag, phot_bp_mean_mag, phot_rp_mean_mag FROM gaiadr2.gaia_source
+        WHERE phot_g_mean_mag < 20
+        AND 1=CONTAINS(POINT('ICRS',ra,dec), POLYGON('ICRS', 293.2641450131976, -22.159454475160008,293.3621556862992,-21.952430387276898,293.47182650745793,-21.99702034318738,293.3739330131346,-22.204113996850335))
+        '
+------>https
+host = gea.esac.esa.int:443
+context = /tap-server/tap/sync
+Content-type = application/x-www-form-urlencoded
+200 200
+[('Date', 'Mon, 18 May 2020 16:09:31 GMT'), ('Server', 'Apache/2.4.6 (Red Hat Enterprise Linux) OpenSSL/1.0.2k-fips PHP/5.4.16 mod_jk/1.2.43'), ('Cache-Control', 'no-cache, no-store, max-age=0, must-revalidate'), ('Pragma', 'no-cache'), ('Expires', '0'), ('X-XSS-Protection', '1; mode=block'), ('X-Frame-Options', 'SAMEORIGIN'), ('X-Content-Type-Options', 'nosniff'), ('Set-Cookie', 'JSESSIONID=E9DB00F11ED86A273B9DCDAC5AE69E52; Path=/tap-server; Secure; HttpOnly'), ('Content-Encoding', 'gzip'), ('Content-Disposition', 'attachment;filename="1589818171309O-result.vot"'), ('Transfer-Encoding', 'chunked'), ('Content-Type', 'application/x-votable+xml')]
+Retrieving sync. results...
+Query finished.
+Launched query: 'SELECT  TOP 2000 source_id, ra, dec, teff_val, phot_g_mean_mag, phot_bp_mean_mag, phot_rp_mean_mag FROM gaiadr2.gaia_source
+        WHERE phot_g_mean_mag < 20
+        AND 1=CONTAINS(POINT('ICRS',ra,dec), POLYGON('ICRS', 293.3444991887864, -21.945120908576104,293.2464698096057,-22.1521337416394,293.1367731131973,-22.107393159201205,293.23491861507796,-21.900450699316536))
+        '
+------>https
+host = gea.esac.esa.int:443
+context = /tap-server/tap/sync
+Content-type = application/x-www-form-urlencoded
+200 200
+[('Date', 'Mon, 18 May 2020 16:09:32 GMT'), ('Server', 'Apache/2.4.6 (Red Hat Enterprise Linux) OpenSSL/1.0.2k-fips PHP/5.4.16 mod_jk/1.2.43'), ('Cache-Control', 'no-cache, no-store, max-age=0, must-revalidate'), ('Pragma', 'no-cache'), ('Expires', '0'), ('X-XSS-Protection', '1; mode=block'), ('X-Frame-Options', 'SAMEORIGIN'), ('X-Content-Type-Options', 'nosniff'), ('Set-Cookie', 'JSESSIONID=DD28094CD8BA4528F6F9F1FD189E8EDA; Path=/tap-server; Secure; HttpOnly'), ('Content-Encoding', 'gzip'), ('Content-Disposition', 'attachment;filename="1589818172507O-result.vot"'), ('Transfer-Encoding', 'chunked'), ('Content-Type', 'application/x-votable+xml')]
+Retrieving sync. results...
+Query finished.
+Launched query: 'SELECT  TOP 2000 source_id, ra, dec, teff_val, phot_g_mean_mag, phot_bp_mean_mag, phot_rp_mean_mag FROM gaiadr2.gaia_source
+        WHERE phot_g_mean_mag < 20
+        AND 1=CONTAINS(POINT('ICRS',ra,dec), POLYGON('ICRS', 295.7881029410274, -23.02793783234489,295.56173735595485,-22.940290840997182,295.6085802226094,-22.837970335931406,295.8348098230772,-22.92556275497406))
+        '
+------>https
+host = gea.esac.esa.int:443
+context = /tap-server/tap/sync
+Content-type = application/x-www-form-urlencoded
+200 200
+[('Date', 'Mon, 18 May 2020 16:09:33 GMT'), ('Server', 'Apache/2.4.6 (Red Hat Enterprise Linux) OpenSSL/1.0.2k-fips PHP/5.4.16 mod_jk/1.2.43'), ('Cache-Control', 'no-cache, no-store, max-age=0, must-revalidate'), ('Pragma', 'no-cache'), ('Expires', '0'), ('X-XSS-Protection', '1; mode=block'), ('X-Frame-Options', 'SAMEORIGIN'), ('X-Content-Type-Options', 'nosniff'), ('Set-Cookie', 'JSESSIONID=D2552467DAD307CEC77D656598B687E4; Path=/tap-server; Secure; HttpOnly'), ('Content-Encoding', 'gzip'), ('Content-Disposition', 'attachment;filename="1589818173584O-result.vot"'), ('Transfer-Encoding', 'chunked'), ('Content-Type', 'application/x-votable+xml')]
+Retrieving sync. results...
+Query finished.
+Launched query: 'SELECT  TOP 2000 source_id, ra, dec, teff_val, phot_g_mean_mag, phot_bp_mean_mag, phot_rp_mean_mag FROM gaiadr2.gaia_source
+        WHERE phot_g_mean_mag < 20
+        AND 1=CONTAINS(POINT('ICRS',ra,dec), POLYGON('ICRS', 295.55405481194884, -22.956770431710204,295.7804422187649,-23.04442640495318,295.73365714555854,-23.14677593323643,295.5071339237996,-23.059065344961805))
+        '
+------>https
+host = gea.esac.esa.int:443
+context = /tap-server/tap/sync
+Content-type = application/x-www-form-urlencoded
+200 200
+[('Date', 'Mon, 18 May 2020 16:09:34 GMT'), ('Server', 'Apache/2.4.6 (Red Hat Enterprise Linux) OpenSSL/1.0.2k-fips PHP/5.4.16 mod_jk/1.2.43'), ('Cache-Control', 'no-cache, no-store, max-age=0, must-revalidate'), ('Pragma', 'no-cache'), ('Expires', '0'), ('X-XSS-Protection', '1; mode=block'), ('X-Frame-Options', 'SAMEORIGIN'), ('X-Content-Type-Options', 'nosniff'), ('Set-Cookie', 'JSESSIONID=EC9CF582C73A9E01A3AB41B7DBAD4F11; Path=/tap-server; Secure; HttpOnly'), ('Content-Encoding', 'gzip'), ('Content-Disposition', 'attachment;filename="1589818174450O-result.vot"'), ('Transfer-Encoding', 'chunked'), ('Content-Type', 'application/x-votable+xml')]
+Retrieving sync. results...
+Query finished.
+After catalog:  1589818174.6547937
+Before telescope:  1589818174.6548703
+After telescope:  1589818174.699876
+Before simulator:  1589818174.699881
+After simulator:  1589818175.6074731
+Star 0
+Before star:  1589818175.609027 3712889
+Before atmosphere:  1589818176.0780413
+After atmosphere:  1589818201.7215497
+Before second kick:  1589818203.2249503
+After second kick:  1589818206.4415686
+Before sensor:  1589818216.6067235
+After sensor:  1589818217.6838515
+After star:  1589818217.879097 3712889
+Before zernike:  1589818217.8797755 3712889
+After zernike:  1589818217.9217858 3712889
+Star 1
+Before star:  1589818218.1000545 111568
+Before sensor:  1589818218.576544
+After sensor:  1589818218.725376
+After star:  1589818218.7347877 111568
+Before zernike:  1589818218.7349763 111568
+After zernike:  1589818218.7394183 111568
+Star 2
+Before star:  1589818219.1651328 3633261
+Before sensor:  1589818231.314584
+After sensor:  1589818232.3065526
+After star:  1589818232.5446174 3633261
+Before zernike:  1589818232.5449731 3633261
+After zernike:  1589818232.6323614 3633261
+Star 3
+Before star:  1589818232.873514 283054
+Before sensor:  1589818233.8891313
+After sensor:  1589818233.989275
+After star:  1589818234.0011387 283054
+Before zernike:  1589818234.0013306 283054
+After zernike:  1589818234.0056462 283054
+Star 4
+Before star:  1589818234.3268428 498703
+Before sensor:  1589818235.9349453
+After sensor:  1589818236.098263
+After star:  1589818236.1172652 498703
+Before zernike:  1589818236.1175685 498703
+After zernike:  1589818236.1223118 498703
+Star 5
+Before star:  1589818236.304848 212852
+Before sensor:  1589818237.0904202
+After sensor:  1589818237.1684062
+After star:  1589818237.1780236 212852
+Before zernike:  1589818237.1781926 212852
+After zernike:  1589818237.182438 212852
+Star 6
+Before star:  1589818238.451948 1407625
+Before sensor:  1589818243.0247107
+After sensor:  1589818243.4168313
+After star:  1589818243.502572 1407625
+Before zernike:  1589818243.5030038 1407625
+After zernike:  1589818243.520526 1407625
+Star 7
+Before star:  1589818243.5867808 61392
+Before sensor:  1589818243.911894
+After sensor:  1589818243.9662905
+After star:  1589818243.974737 61392
+Before zernike:  1589818243.9749005 61392
+After zernike:  1589818243.979291 61392
+Star 8
+Before star:  1589818244.0252335 579123
+Before sensor:  1589818245.8389542
+After sensor:  1589818245.9844031
+After star:  1589818246.0159948 579123
+Before zernike:  1589818246.0161743 579123
+After zernike:  1589818246.020596 579123
+Star 9
+Before star:  1589818246.0869324 636759
+Before sensor:  1589818248.0021808
+After sensor:  1589818248.1835883
+After star:  1589818248.2174568 636759
+Before zernike:  1589818248.2182512 636759
+After zernike:  1589818248.2246583 636759
